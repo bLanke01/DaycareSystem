@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '../../firebase/auth-context';
 
 const LoginForm = () => {
   const router = useRouter();
@@ -14,6 +15,10 @@ const LoginForm = () => {
     email: '',
     password: ''
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  const { signIn, signInWithGoogle } = useAuth();
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -23,21 +28,58 @@ const LoginForm = () => {
     });
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login submitted:', { ...formData, userType });
     
-    // Redirect to the appropriate dashboard (to be implemented with actual authentication)
-    if (userType === 'admin') {
-      router.push('/admin');
-    } else {
-      router.push('/parent');
+    try {
+      setError('');
+      setLoading(true);
+      
+      const { user, error } = await signIn(formData.email, formData.password);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Verify user role matches the type they're trying to log in as
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!userDoc.exists() || userDoc.data().role !== userType) {
+        throw new Error(`You are not registered as a ${userType === 'admin' ? 'Staff/Admin' : 'Parent'}`);
+      }
+      
+      // Redirect based on role
+      if (userType === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push('/parent');
+      }
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Google login would be implemented here
-    console.log('Google login clicked');
+  const handleGoogleLogin = async () => {
+    try {
+      setError('');
+      setLoading(true);
+      
+      const { user, error } = await signInWithGoogle();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Google login is only for parents
+      router.push('/parent');
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
   
   return (
@@ -53,10 +95,22 @@ const LoginForm = () => {
       
       <h2 className="auth-title">Login</h2>
       
-      <button className="google-auth-btn" onClick={handleGoogleLogin}>
+      {error && <div className="error-message">{error}</div>}
+      
+      <button 
+        className="google-auth-btn" 
+        onClick={handleGoogleLogin}
+        disabled={loading || userType === 'admin'}
+      >
         <img src="/google-icon.svg" alt="Google" className="google-icon" />
         Login with Google
       </button>
+      
+      {userType === 'admin' && (
+        <div className="info-message">
+          Google login is only available for parent accounts
+        </div>
+      )}
       
       <div className="divider">
         <span>OR</span>
@@ -73,6 +127,7 @@ const LoginForm = () => {
             onChange={handleChange}
             required
             className="auth-input"
+            disabled={loading}
           />
         </div>
         
@@ -86,10 +141,17 @@ const LoginForm = () => {
             onChange={handleChange}
             required
             className="auth-input"
+            disabled={loading}
           />
         </div>
         
-        <button type="submit" className="submit-btn">Login</button>
+        <button 
+          type="submit" 
+          className="submit-btn"
+          disabled={loading}
+        >
+          {loading ? 'Loading...' : 'Login'}
+        </button>
       </form>
     </div>
   );

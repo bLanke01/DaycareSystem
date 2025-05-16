@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useAuth } from '../../firebase/auth-context';
 
 const SignupForm = () => {
   const router = useRouter();
@@ -14,8 +15,13 @@ const SignupForm = () => {
     firstName: '',
     lastName: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  const { registerUser, signInWithGoogle } = useAuth();
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,24 +31,104 @@ const SignupForm = () => {
     });
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Signup submitted:', { ...formData, userType });
     
     // Only allow parent signups
     if (userType === 'admin') {
-      alert('Admin accounts can only be created by existing administrators. Please contact the daycare administrator for assistance.');
+      setError('Admin accounts can only be created by existing administrators');
       return;
     }
     
-    // Redirect to parent dashboard (to be implemented with actual authentication)
-    router.push('/parent');
+    // Password validation
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords don't match");
+      return;
+    }
+    
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+    
+    try {
+      setError('');
+      setLoading(true);
+      
+      const userData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        role: userType // Always 'parent' for signup
+      };
+      
+      const { user, error } = await registerUser(formData.email, formData.password, userData);
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Redirect to parent dashboard
+      router.push('/parent');
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleSignup = () => {
-    // Google signup would be implemented here
-    console.log('Google signup clicked');
+  const handleGoogleSignup = async () => {
+    try {
+      setError('');
+      setLoading(true);
+      
+      const { user, error } = await signInWithGoogle();
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      // Google signup is only for parents
+      router.push('/parent');
+      
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+  
+  // Don't allow admin signup
+  if (userType === 'admin') {
+    return (
+      <div className="auth-form-container">
+        <div className="auth-tabs">
+          <Link href={`/auth/signup?type=${userType}`} className="tab active">
+            Sign up
+          </Link>
+          <Link href={`/auth/login?type=${userType}`} className="tab">
+            Log in
+          </Link>
+        </div>
+        
+        <h2 className="auth-title">Admin Sign Up</h2>
+        
+        <div className="error-message">
+          <p>Admin accounts can only be created by existing administrators.</p>
+          <p>Please contact the daycare administrator for assistance.</p>
+        </div>
+        
+        <div className="auth-redirect">
+          <p>Already have an admin account?</p>
+          <Link href={`/auth/login?type=admin`}>
+            <button className="auth-button login-btn">
+              Go to Admin Login
+            </button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="auth-form-container">
@@ -57,7 +143,13 @@ const SignupForm = () => {
       
       <h2 className="auth-title">Sign Up</h2>
       
-      <button className="google-auth-btn" onClick={handleGoogleSignup}>
+      {error && <div className="error-message">{error}</div>}
+      
+      <button 
+        className="google-auth-btn" 
+        onClick={handleGoogleSignup}
+        disabled={loading}
+      >
         <img src="/google-icon.svg" alt="Google" className="google-icon" />
         Sign up with Google
       </button>
@@ -78,6 +170,7 @@ const SignupForm = () => {
               onChange={handleChange}
               required
               className="auth-input"
+              disabled={loading}
             />
           </div>
           
@@ -91,6 +184,7 @@ const SignupForm = () => {
               onChange={handleChange}
               required
               className="auth-input"
+              disabled={loading}
             />
           </div>
         </div>
@@ -105,10 +199,46 @@ const SignupForm = () => {
             onChange={handleChange}
             required
             className="auth-input"
+            disabled={loading}
           />
         </div>
         
-        <button type="submit" className="submit-btn">Sign Up</button>
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            value={formData.password}
+            onChange={handleChange}
+            required
+            className="auth-input"
+            disabled={loading}
+            minLength="6"
+          />
+        </div>
+        
+        <div className="form-group">
+          <label htmlFor="confirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            name="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+            className="auth-input"
+            disabled={loading}
+          />
+        </div>
+        
+        <button 
+          type="submit" 
+          className="submit-btn"
+          disabled={loading}
+        >
+          {loading ? 'Loading...' : 'Sign Up'}
+        </button>
       </form>
     </div>
   );

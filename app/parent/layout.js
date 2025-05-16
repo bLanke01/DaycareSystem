@@ -3,10 +3,13 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../firebase/auth-context';
+import { withAuth } from '../utils/with-auth';
 
-export default function ParentDashboardLayout({ children }) {
+const ParentDashboardLayout = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
+  const { user, logOut } = useAuth();
   
   const handleSearch = (e) => {
     e.preventDefault();
@@ -14,10 +17,13 @@ export default function ParentDashboardLayout({ children }) {
     console.log('Searching for:', searchQuery);
   };
   
-  const handleLogout = () => {
-    // Logout functionality would be implemented here with Firebase
-    console.log('Logging out');
-    router.push('/');
+  const handleLogout = async () => {
+    const { success, error } = await logOut();
+    if (success) {
+      router.push('/');
+    } else if (error) {
+      console.error('Logout error:', error);
+    }
   };
   
   return (
@@ -104,6 +110,16 @@ export default function ParentDashboardLayout({ children }) {
                     </div>
                   </Link>
                 </li>
+                
+                <li className="nav-item">
+                  <button 
+                    onClick={handleLogout}
+                    className="nav-link logout-link"
+                  >
+                    <div className="nav-icon">🚪</div>
+                    <span>Logout</span>
+                  </button>
+                </li>
               </ul>
             </div>
           </nav>
@@ -132,8 +148,8 @@ export default function ParentDashboardLayout({ children }) {
               </div>
               
               <div className="user-profile">
-                <span className="user-name">Delicious Burger</span>
-                <div className="user-avatar">🍔</div>
+                <span className="user-name">{user?.email || 'Parent User'}</span>
+                <div className="user-avatar">👨‍👩‍👧‍👦</div>
               </div>
             </div>
           </div>
@@ -145,4 +161,7 @@ export default function ParentDashboardLayout({ children }) {
       </div>
     </div>
   );
-}
+};
+
+// Export the layout wrapped with authentication protection
+export default withAuth(ParentDashboardLayout, 'parent');
