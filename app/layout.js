@@ -1,7 +1,9 @@
-// app/layout.js
+// app/layout.js (updated to avoid immediate redirection)
 'use client';
 
 import './globals.css';
+import { useEffect, useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Footer from './components/layout/Footer';
 import { AuthProvider, useAuth } from './firebase/auth-context';
@@ -19,18 +21,46 @@ export default function RootLayout({ children }) {
 }
 
 function MainContent({ children }) {
-  const { user, userRole, loading, logOut } = useAuth();
+  const { user, userRole, loading, adminSetupComplete } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [redirecting, setRedirecting] = useState(false);
 
-  // If we're still loading, show a loading indicator
-  if (loading) {
+  // Check admin setup on load - but only redirect under specific conditions
+  useEffect(() => {
+    // Skip this check for admin-setup page to avoid infinite loops
+    if (pathname === '/admin-setup') return;
+
+    // Check for admin-related pages that need setup
+    const isAdminPage = pathname.startsWith('/admin');
+    const isAuthPage = pathname.startsWith('/auth');
+    
+    const checkAndRedirect = async () => {
+      // Only redirect if:
+      // 1. We're done loading
+      // 2. We know adminSetupComplete is false (not null)
+      // 3. We're trying to access admin or auth pages
+      if (!loading && adminSetupComplete === false && (isAdminPage || isAuthPage)) {
+        setRedirecting(true);
+        router.push('/admin-setup');
+      } else {
+        setRedirecting(false);
+      }
+    };
+
+    checkAndRedirect();
+  }, [loading, adminSetupComplete, router, pathname]);
+
+  // If we're still loading or redirecting, show a loading indicator
+  if (loading || redirecting) {
     return <div className="loading-spinner">Loading...</div>;
   }
 
   // If user is logged in, don't show the header/footer on dashboard pages
   if (user && (userRole === 'admin' || userRole === 'parent')) {
     // Check if we're on a dashboard page
-    const isAdminPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/admin');
-    const isParentPage = typeof window !== 'undefined' && window.location.pathname.startsWith('/parent');
+    const isAdminPage = pathname.startsWith('/admin');
+    const isParentPage = pathname.startsWith('/parent');
     
     if (isAdminPage || isParentPage) {
       return <>{children}</>;
@@ -54,7 +84,7 @@ function MainContent({ children }) {
             {user ? (
               <>
                 <div className="user-welcome">Welcome, {user.email}</div>
-                <button onClick={logOut} className="logout-btn">Logout</button>
+                <button onClick={() => useAuth().logOut()} className="logout-btn">Logout</button>
                 {userRole === 'admin' ? (
                   <Link href="/admin" className="dashboard-btn">
                     Admin Dashboard

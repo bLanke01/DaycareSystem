@@ -1,3 +1,4 @@
+// app/utils/with-auth.js (updated)
 'use client';
 
 import { useEffect } from 'react';
@@ -6,10 +7,16 @@ import { useAuth } from '../firebase/auth-context';
 
 export function withAuth(Component, requiredRole) {
   return function AuthProtected(props) {
-    const { user, userRole, loading } = useAuth();
+    const { user, userRole, loading, adminSetupComplete } = useAuth();
 
     useEffect(() => {
       if (!loading) {
+        // Check if admin setup is complete
+        if (adminSetupComplete === false) {
+          redirect('/admin-setup');
+          return;
+        }
+
         if (!user) {
           // Not logged in, redirect to login
           redirect('/auth');
@@ -22,7 +29,7 @@ export function withAuth(Component, requiredRole) {
           }
         }
       }
-    }, [user, userRole, loading]);
+    }, [user, userRole, loading, adminSetupComplete]);
 
     // Show loading state while checking authentication
     if (loading) {

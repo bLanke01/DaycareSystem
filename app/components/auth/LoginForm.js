@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../firebase/auth-context';
+import { getDoc, doc } from 'firebase/firestore'; // Add this import
+import { db } from '../../firebase/config'; // Add this import
 
 const LoginForm = () => {
   const router = useRouter();
@@ -22,7 +24,7 @@ const LoginForm = () => {
   
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
+    setFormData({ 
       ...formData,
       [name]: value
     });

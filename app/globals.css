@@ -1622,3 +1622,272 @@ a {
   padding: 0.5rem 1rem;
   border-radius: 20px;
 }
+
+/* Admin Setup Styles */
+.admin-setup-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-color);
+}
+
+.admin-setup-page .container {
+  max-width: 500px;
+  width: 100%;
+  padding: 2rem;
+}
+
+/* Staff Management Styles */
+.staff-management {
+  padding: 1rem;
+}
+
+.staff-list {
+  margin-top: 1.5rem;
+}
+
+.staff-list table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.staff-list th, .staff-list td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.staff-list th {
+  background-color: #f9f9f9;
+  font-weight: 600;
+}
+
+.staff-list tr:last-child td {
+  border-bottom: none;
+}
+
+.delete-btn {
+  background-color: #ffeeee;
+  color: #d32f2f;
+  border: 1px solid #ffcccc;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background-color: #ffcccc;
+}
+
+/* Access Code Management Styles */
+.access-code-management {
+  padding: 1rem;
+}
+
+.access-codes-list {
+  margin-top: 1.5rem;
+}
+
+.code-input-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.code-input-container input {
+  flex: 1;
+}
+
+.generate-btn {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.generate-btn:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* Child Profile Management Styles */
+.child-profile-management {
+  padding: 1rem;
+}
+
+.children-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.child-card {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.child-photo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background-color: var(--secondary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.child-info {
+  flex: 1;
+}
+
+.child-info h2 {
+  margin-bottom: 0.5rem;
+}
+
+.child-info p {
+  margin-bottom: 0.25rem;
+  color: var(--light-text);
+}
+
+.child-card-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.edit-btn:hover {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* Form Tabs Styles */
+.form-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.form-tab {
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--light-text);
+  transition: all 0.2s;
+}
+
+.form-tab.active {
+  border-bottom: 2px solid var(--primary-color);
+  color: var(--primary-color);
+}
+
+.form-tab-content {
+  display: none;
+}
+
+.form-tab-content.active {
+  display: block;
+}
+
+/* Modal Styles */
+.large-modal {
+  max-width: 700px;
+}
+
+/* Emergency Contacts Styles */
+.emergency-contacts {
+  margin-bottom: 1.5rem;
+}
+
+.contact-card {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.contact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.contact-header h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.remove-contact-btn {
+  background-color: #ffeeee;
+  color: #d32f2f;
+  border: 1px solid #ffcccc;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.contact-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.checkbox-group {
+  grid-column: span 2;
+}
+
+.add-contact-btn {
+  background-color: var(--bg-color);
+  color: var(--primary-color);
+  border: 1px dashed var(--primary-color);
+  padding: 0.75rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  cursor: pointer;
+}
+
+.add-contact-btn:hover {
+  background-color: var(--secondary-color);
+}
+
+.next-btn {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.next-btn:hover {
+  background-color: #e64a29;
+}

@@ -1,5 +1,4 @@
-// app/admin/page.js
-
+// app/admin/page.js (updated with navigation links)
 export default function AdminDashboard() {
     // Mock data for dashboard cards
     const dashboardData = {
@@ -57,6 +56,12 @@ export default function AdminDashboard() {
             <div className="card-value">{dashboardData.pendingPayments}</div>
             <a href="/admin/payment" className="card-link">Payment Details</a>
           </div>
+          
+          <div className="dashboard-card">
+            <h3>Access Codes</h3>
+            <div className="card-value">3</div>
+            <a href="/admin/access-codes" className="card-link">Manage Access Codes</a>
+          </div>
         </div>
         
         <div className="dashboard-widgets">
@@ -89,10 +94,10 @@ export default function AdminDashboard() {
           <div className="widget">
             <h2>Quick Actions</h2>
             <div className="action-buttons">
-              <button className="action-btn">Mark Attendance</button>
-              <button className="action-btn">Add New Child</button>
-              <button className="action-btn">Create Announcement</button>
-              <button className="action-btn">Generate Report</button>
+              <a href="/admin/attendance"><button className="action-btn">Mark Attendance</button></a>
+              <a href="/admin/children"><button className="action-btn">Add New Child</button></a>
+              <a href="/admin/staff"><button className="action-btn">Manage Staff</button></a>
+              <a href="/admin/access-codes"><button className="action-btn">Generate Access Code</button></a>
             </div>
           </div>
         </div>

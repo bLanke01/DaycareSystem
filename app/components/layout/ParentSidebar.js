@@ -10,6 +10,7 @@ const ParentSidebar = () => {
   // Define menu items
   const menuItems = [
     { icon: '👶', label: 'Child Profile', path: '/parent' },
+    { icon: '📝', label: 'Manage Children', path: '/parent/manage-children' },
     { icon: '📅', label: 'View Schedules', path: '/parent/schedules' },
     { icon: '🍽️', label: 'View Meals', path: '/parent/meals' },
     { icon: '✓', label: 'View Attendance', path: '/parent/attendance' },
