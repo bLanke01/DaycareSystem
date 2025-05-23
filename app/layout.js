@@ -1,4 +1,4 @@
-// app/layout.js (updated to avoid immediate redirection)
+// app/layout.js (Updated with better redirect logic)
 'use client';
 
 import './globals.css';
@@ -26,23 +26,33 @@ function MainContent({ children }) {
   const pathname = usePathname();
   const [redirecting, setRedirecting] = useState(false);
 
-  // Check admin setup on load - but only redirect under specific conditions
+  // Check admin setup on load - but be more specific about when to redirect
   useEffect(() => {
     // Skip this check for admin-setup page to avoid infinite loops
     if (pathname === '/admin-setup') return;
-
-    // Check for admin-related pages that need setup
-    const isAdminPage = pathname.startsWith('/admin');
-    const isAuthPage = pathname.startsWith('/auth');
+    
+    // Only redirect to admin-setup if:
+    // 1. We're done loading auth state
+    // 2. Admin setup is definitely not complete (false, not null)
+    // 3. Someone is trying to access admin-specific pages OR trying to login as admin
+    // 4. NOT if they're just trying to sign up as parent
     
     const checkAndRedirect = async () => {
-      // Only redirect if:
-      // 1. We're done loading
-      // 2. We know adminSetupComplete is false (not null)
-      // 3. We're trying to access admin or auth pages
-      if (!loading && adminSetupComplete === false && (isAdminPage || isAuthPage)) {
-        setRedirecting(true);
-        router.push('/admin-setup');
+      if (!loading && adminSetupComplete === false) {
+        // Check if this is an admin-related action
+        const isAdminPage = pathname.startsWith('/admin');
+        const isAdminAuth = pathname.startsWith('/auth') && 
+                           (pathname.includes('type=admin') || 
+                            (typeof window !== 'undefined' && window.location.search.includes('type=admin')));
+        
+        // Only redirect if accessing admin areas or admin auth
+        if (isAdminPage || isAdminAuth) {
+          console.log('Redirecting to admin setup because:', { isAdminPage, isAdminAuth });
+          setRedirecting(true);
+          router.push('/admin-setup');
+        } else {
+          setRedirecting(false);
+        }
       } else {
         setRedirecting(false);
       }
@@ -51,14 +61,13 @@ function MainContent({ children }) {
     checkAndRedirect();
   }, [loading, adminSetupComplete, router, pathname]);
 
-  // If we're still loading or redirecting, show a loading indicator
+  // If we're still loading auth or redirecting, show loading
   if (loading || redirecting) {
     return <div className="loading-spinner">Loading...</div>;
   }
 
   // If user is logged in, don't show the header/footer on dashboard pages
   if (user && (userRole === 'admin' || userRole === 'parent')) {
-    // Check if we're on a dashboard page
     const isAdminPage = pathname.startsWith('/admin');
     const isParentPage = pathname.startsWith('/parent');
     

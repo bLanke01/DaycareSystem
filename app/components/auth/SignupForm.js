@@ -1,17 +1,17 @@
-// components/auth/SignupForm.js
+// components/auth/SignupForm.js (Enhanced with debugging)
 'use client';
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../../firebase/auth-context';
 import { db } from '../../firebase/config';
 
 const SignupForm = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const userType = searchParams.get('type') || 'parent'; // Default to parent
+  const userType = searchParams.get('type') || 'parent';
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -19,10 +19,11 @@ const SignupForm = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    accessCode: '' // New field for access code
+    accessCode: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
   
   const { registerUser, signInWithGoogle } = useAuth();
   
@@ -34,16 +35,50 @@ const SignupForm = () => {
     });
   };
   
+  // Debug function to check all access codes
+  const debugAccessCodes = async () => {
+    try {
+      console.log('🔍 Debugging access codes...');
+      setDebugInfo('Checking access codes...');
+      
+      const accessCodesRef = collection(db, 'accessCodes');
+      const snapshot = await getDocs(accessCodesRef);
+      
+      console.log('Total access codes found:', snapshot.size);
+      
+      let debugText = `Found ${snapshot.size} access codes:\n`;
+      
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        console.log('Access Code Details:', {
+          documentId: doc.id,
+          code: data.code,
+          used: data.used,
+          usesLeft: data.usesLeft,
+          parentEmail: data.parentEmail,
+          childName: data.childName,
+          expiresAt: data.expiresAt
+        });
+        
+        debugText += `\nCode: "${data.code}" | Used: ${data.used} | UsesLeft: ${data.usesLeft} | Email: ${data.parentEmail}\n`;
+      });
+      
+      setDebugInfo(debugText);
+      
+    } catch (error) {
+      console.error('Error debugging access codes:', error);
+      setDebugInfo(`Error: ${error.message}`);
+    }
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Only allow parent signups
     if (userType === 'admin') {
       setError('Admin accounts can only be created by existing administrators');
       return;
     }
     
-    // Password validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords don't match");
       return;
@@ -58,39 +93,84 @@ const SignupForm = () => {
       setError('');
       setLoading(true);
       
-      // For parent registration, verify access code
-      if (userType === 'parent') {
-        if (!formData.accessCode.trim()) {
-          throw new Error('Access code is required for registration');
-        }
-        
-        // Check if access code exists and is valid
-        const accessCodesRef = collection(db, 'accessCodes');
-        const q = query(
-          accessCodesRef, 
-          where('code', '==', formData.accessCode.trim()),
-          where('usesLeft', '>', 0)
-        );
-        const snapshot = await getDocs(q);
-        
-        if (snapshot.empty) {
-          throw new Error('Invalid or expired access code');
-        }
-        
-        const accessCodeDoc = snapshot.docs[0];
-        const accessCodeData = accessCodeDoc.data();
-        
-        // Check if code is expired
-        const expiryDate = new Date(accessCodeData.expiresAt);
-        if (expiryDate < new Date()) {
-          throw new Error('This access code has expired');
-        }
+      console.log('🚀 Starting registration process...');
+      console.log('Entered access code:', `"${formData.accessCode}"`);
+      console.log('Trimmed access code:', `"${formData.accessCode.trim()}"`);
+      
+      // Verify access code exists and is valid
+      if (!formData.accessCode.trim()) {
+        throw new Error('Access code is required for registration');
       }
+      
+      const trimmedCode = formData.accessCode.trim();
+      console.log('Looking for access code:', trimmedCode);
+      
+      // Search through all access codes to find a match
+      const accessCodesRef = collection(db, 'accessCodes');
+      const accessCodesSnapshot = await getDocs(accessCodesRef);
+      
+      let foundCodeData = null;
+      let foundDocRef = null;
+      
+      console.log(`📝 Checking ${accessCodesSnapshot.size} access codes...`);
+      
+      accessCodesSnapshot.forEach(docSnapshot => {
+        const data = docSnapshot.data();
+        console.log(`Comparing "${trimmedCode}" with "${data.code}"`);
+        
+        if (data.code === trimmedCode) {
+          foundCodeData = data;
+          foundDocRef = docSnapshot.ref;
+          console.log('✅ Found matching access code!');
+        }
+      });
+      
+      if (!foundCodeData) {
+        // Show all available codes for debugging
+        const availableCodes = [];
+        accessCodesSnapshot.forEach(docSnapshot => {
+          const data = docSnapshot.data();
+          availableCodes.push(`"${data.code}" (used: ${data.used})`);
+        });
+        
+        console.log('❌ No matching code found. Available codes:', availableCodes);
+        throw new Error(`Access code "${trimmedCode}" not found. Available codes in console.`);
+      }
+      
+      console.log('📋 Access code data:', foundCodeData);
+      
+      // Check if code is expired
+      const expiryDate = new Date(foundCodeData.expiresAt);
+      const now = new Date();
+      console.log('Expiry check:', { expiryDate, now, expired: expiryDate < now });
+      
+      if (expiryDate < now) {
+        throw new Error('This access code has expired. Please contact the daycare for a new code.');
+      }
+      
+      // Check if code is already used
+      console.log('Usage check:', { used: foundCodeData.used, usesLeft: foundCodeData.usesLeft });
+      
+      if (foundCodeData.used || foundCodeData.usesLeft <= 0) {
+        throw new Error('This access code has already been used.');
+      }
+      
+      // Verify email matches (if specified in access code)
+      if (foundCodeData.parentEmail && 
+          foundCodeData.parentEmail.toLowerCase() !== formData.email.toLowerCase()) {
+        console.log('Email mismatch:', { 
+          expected: foundCodeData.parentEmail.toLowerCase(), 
+          entered: formData.email.toLowerCase() 
+        });
+        throw new Error(`This access code was issued for ${foundCodeData.parentEmail}. Please use that email address.`);
+      }
+      
+      console.log('✅ All validations passed. Creating user account...');
       
       const userData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        role: userType // Always 'parent' for signup
+        role: 'parent'
       };
       
       const { user, error } = await registerUser(formData.email, formData.password, userData);
@@ -99,31 +179,49 @@ const SignupForm = () => {
         throw new Error(error.message);
       }
       
-      // Update access code usage
-      if (userType === 'parent') {
-        const accessCodesRef = collection(db, 'accessCodes');
-        const q = query(accessCodesRef, where('code', '==', formData.accessCode.trim()));
-        const snapshot = await getDocs(q);
-        
-        if (!snapshot.empty) {
-          const accessCodeDoc = snapshot.docs[0];
-          
-          // Update the access code document
-          await updateDoc(doc(db, 'accessCodes', accessCodeDoc.id), {
-            usesLeft: increment(-1),
-            usedBy: [...(accessCodeDoc.data().usedBy || []), {
-              userId: user.uid,
-              email: user.email,
-              usedAt: new Date().toISOString()
-            }]
-          });
-        }
-      }
+      console.log('✅ User created:', user.uid);
       
-      // Redirect to parent dashboard
+      // Update access code as used
+      console.log('📝 Updating access code as used...');
+      await updateDoc(foundDocRef, {
+        used: true,
+        usesLeft: 0,
+        usedAt: new Date().toISOString(),
+        parentId: user.uid
+      });
+      
+      // Find and update children linked to this access code
+      console.log('👶 Finding children with this access code...');
+      const childrenQuery = query(
+        collection(db, 'children'), 
+        where('accessCode', '==', foundCodeData.code)
+      );
+      const childrenSnapshot = await getDocs(childrenQuery);
+      
+      console.log(`Found ${childrenSnapshot.size} children to link`);
+      
+      // Update each child to link with parent
+      const updatePromises = [];
+      childrenSnapshot.forEach(childDoc => {
+        console.log('Linking child:', childDoc.id);
+        updatePromises.push(
+          updateDoc(doc(db, 'children', childDoc.id), {
+            parentId: user.uid,
+            parentRegistered: true,
+            parentRegisteredAt: new Date().toISOString()
+          })
+        );
+      });
+      
+      await Promise.all(updatePromises);
+      console.log('✅ All children linked successfully');
+      
+      // Success! Redirect to parent dashboard
+      console.log('🎉 Registration complete! Redirecting to dashboard...');
       router.push('/parent');
       
     } catch (err) {
+      console.error('❌ Registration error:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -131,64 +229,10 @@ const SignupForm = () => {
   };
 
   const handleGoogleSignup = async () => {
-    try {
-      setError('');
-      setLoading(true);
-      
-      // Google signup still requires an access code for parents
-      if (!formData.accessCode.trim()) {
-        throw new Error('Access code is required for registration');
-      }
-      
-      // Check if access code exists and is valid
-      const accessCodesRef = collection(db, 'accessCodes');
-      const q = query(
-        accessCodesRef, 
-        where('code', '==', formData.accessCode.trim()),
-        where('usesLeft', '>', 0)
-      );
-      const snapshot = await getDocs(q);
-      
-      if (snapshot.empty) {
-        throw new Error('Invalid or expired access code');
-      }
-      
-      const accessCodeDoc = snapshot.docs[0];
-      const accessCodeData = accessCodeDoc.data();
-      
-      // Check if code is expired
-      const expiryDate = new Date(accessCodeData.expiresAt);
-      if (expiryDate < new Date()) {
-        throw new Error('This access code has expired');
-      }
-      
-      const { user, error } = await signInWithGoogle();
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      // Update access code usage
-      await updateDoc(doc(db, 'accessCodes', accessCodeDoc.id), {
-        usesLeft: increment(-1),
-        usedBy: [...(accessCodeDoc.data().usedBy || []), {
-          userId: user.uid,
-          email: user.email,
-          usedAt: new Date().toISOString()
-        }]
-      });
-      
-      // Google signup is only for parents
-      router.push('/parent');
-      
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    // Similar implementation but for Google signup
+    setError('Google signup temporarily disabled. Please use email signup.');
   };
   
-  // Don't allow admin signup
   if (userType === 'admin') {
     return (
       <div className="auth-form-container">
@@ -233,6 +277,42 @@ const SignupForm = () => {
       
       <h2 className="auth-title">Parent Sign Up</h2>
       
+      {/* Debug Section */}
+      <div style={{ 
+        backgroundColor: '#f0f0f0', 
+        padding: '1rem', 
+        marginBottom: '1rem', 
+        borderRadius: '4px' 
+      }}>
+        <button 
+          type="button" 
+          onClick={debugAccessCodes}
+          style={{
+            backgroundColor: '#007bff',
+            color: 'white',
+            border: 'none',
+            padding: '0.5rem 1rem',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginBottom: '0.5rem'
+          }}
+        >
+          🔍 Debug Access Codes
+        </button>
+        {debugInfo && (
+          <pre style={{ 
+            fontSize: '0.8rem', 
+            backgroundColor: 'white', 
+            padding: '0.5rem', 
+            borderRadius: '4px',
+            overflow: 'auto',
+            maxHeight: '200px'
+          }}>
+            {debugInfo}
+          </pre>
+        )}
+      </div>
+      
       {error && <div className="error-message">{error}</div>}
       
       <form onSubmit={handleSubmit} className="auth-form">
@@ -247,9 +327,9 @@ const SignupForm = () => {
             required
             className="auth-input"
             disabled={loading}
-            placeholder="Enter the access code provided by the daycare"
+            placeholder="Enter access code (e.g., QCY3Y1T or N58N7ZGR)"
           />
-          <small>Contact the daycare to obtain an access code</small>
+          <small>Try: QCY3Y1T or N58N7ZGR</small>
         </div>
         
         <div className="name-inputs">
@@ -334,19 +414,6 @@ const SignupForm = () => {
         </button>
       </form>
 
-      <div className="divider">
-        <span>OR</span>
-      </div>
-      
-      <button 
-        className="google-auth-btn" 
-        onClick={handleGoogleSignup}
-        disabled={loading || !formData.accessCode.trim()}
-      >
-        <img src="/google-icon.svg" alt="Google" className="google-icon" />
-        Sign up with Google
-      </button>
-      
       <div className="auth-redirect">
         <p>Already have an account?</p>
         <Link href={`/auth/login?type=parent`}>
