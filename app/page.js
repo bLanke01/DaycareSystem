@@ -1,30 +1,22 @@
-// app/page.js
-import Link from 'next/link';
-
+ 
+import Map from "./Components/Map";
 export default function Home() {
   return (
-    <div className="home-page">
-      <div className="content-wrapper">
-        <div className="hero-content">
-          <h1>Spring Break Enrollment Time!</h1>
-          <p>
-            An enim nullam tempor sapien, gravida donec enim ipsum porta 
-            justo congue magna at pretium purus pretium ligula
-          </p>
-          <Link href="/program">
-            <button className="cta-button">ENROLL</button>
-          </Link>
-        </div>
-        
-        <div className="hero-image">
-          {/* Image would go here in a real implementation */}
-          <div className="cta-button-container">
-            <Link href="/contact">
-              <button className="cta-button secondary">Book a tour</button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    </div>
+ <div>
+<Map/>
+ </div>
   );
 }
+
+
+//npm i @react-google-maps/api
+
+
+//AIzaSyBxQQwOO9H6oaSFzRmwPdhcuvJgpU_aEsY
+
+
+
+
+//this is daycare location
+//50.911597826074235, -114.11570013067202
+
