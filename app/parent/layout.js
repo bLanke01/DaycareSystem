@@ -72,6 +72,16 @@ export default function ParentDashboardLayout({ children }) {
                     </div>
                   </Link>
                 </li>
+            
+
+            <li className="nav-item">
+                  <Link href="/parent/meals">
+                    <div className="nav-link">
+                      <div className="nav-icon">🍽️</div>
+                      <span>Meals</span>
+                    </div>
+                  </Link>
+                </li>
               </ul>
             </div>
             
