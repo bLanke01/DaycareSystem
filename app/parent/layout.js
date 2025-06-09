@@ -1,12 +1,45 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { db } from '../../lib/firebase';
+import { collection, query, onSnapshot } from 'firebase/firestore';
+import { getAuth } from "firebase/auth";
 import { useRouter } from 'next/navigation';
 
 export default function ParentDashboardLayout({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [parentName, setParentName] = useState("");
   const router = useRouter();
+  
+  // Get logged-in parent name/email/uid
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setParentName(user.displayName || user.email || user.uid);
+      }
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Listen for unread messages for this parent
+  useEffect(() => {
+    if (!parentName) return;
+    const q = query(collection(db, 'messages'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      let count = 0;
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.recipient === parentName && !data.read) {
+          count += 1;
+        }
+      });
+      setUnreadCount(count);
+    });
+    return () => unsubscribe();
+  }, [parentName]);
   
   const handleSearch = (e) => {
     e.preventDefault();
@@ -66,9 +99,24 @@ export default function ParentDashboardLayout({ children }) {
                 
                 <li className="nav-item">
                   <Link href="/parent/messages">
-                    <div className="nav-link">
+                    <div className="nav-link" style={{ display: 'flex', alignItems: 'center' }}>
                       <div className="nav-icon">💬</div>
                       <span>Message system</span>
+                      {unreadCount > 0 && (
+                        <span style={{
+                          marginLeft: 8,
+                          background: 'red',
+                          color: 'white',
+                          borderRadius: '50%',
+                          padding: '2px 8px',
+                          fontSize: 12,
+                          fontWeight: 'bold',
+                          lineHeight: 1,
+                          display: 'inline-block'
+                        }}>
+                          {unreadCount}
+                        </span>
+                      )}
                     </div>
                   </Link>
                 </li>
@@ -127,8 +175,12 @@ export default function ParentDashboardLayout({ children }) {
             
             <div className="user-menu">
               <div className="notification-bell">
-                <span className="notification-icon">🔔</span>
-                <span className="notification-badge">1</span>
+                <Link href="/parent/messages" style={{ textDecoration: 'none' }}>
+                  <span className="notification-icon" style={{ cursor: 'pointer' }}>🔔</span>
+                  {unreadCount > 0 && (
+                    <span className="notification-badge">{unreadCount}</span>
+                  )}
+                </Link>
               </div>
               
               <div className="user-profile">

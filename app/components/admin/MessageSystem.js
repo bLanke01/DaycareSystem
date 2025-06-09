@@ -1,521 +1,291 @@
-// components/admin/MessageSystem.js
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { db } from '../../../lib/firebase';
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  doc,
+  serverTimestamp
+} from 'firebase/firestore';
 
 const MessageSystem = () => {
-  // Mock data for messages
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'Sarah Thompson',
-      role: 'Parent',
-      subject: 'Vacation Notice',
-      content: 'Hello, I wanted to inform you that Emma will be absent next week as we are going on a family vacation. We will return on the 15th.',
-      date: '2025-05-03T09:45:00Z',
-      read: true,
-      attachments: []
-    },
-    {
-      id: 2,
-      sender: 'Admin',
-      role: 'Admin',
-      subject: 'Re: Vacation Notice',
-      content: 'Thank you for letting us know, Sarah. We hope you have a wonderful vacation! Emma\'s spot will be held for her return.',
-      date: '2025-05-03T10:15:00Z',
-      read: true,
-      attachments: []
-    },
-    {
-      id: 3,
-      sender: 'Maria Garcia',
-      role: 'Parent',
-      subject: 'Allergy Concern',
-      content: 'Hi, I noticed that Noah had a small rash yesterday when I picked him up. I\'m concerned it might be an allergic reaction to something he ate. Could you please check the lunch menu for yesterday?',
-      date: '2025-05-04T14:30:00Z',
-      read: false,
-      attachments: [
-        { name: 'rash_photo.jpg', size: '1.2MB' }
-      ]
-    },
-    {
-      id: 4,
-      sender: 'James Johnson',
-      role: 'Parent',
-      subject: 'Payment Question',
-      content: 'Hello, I have a question about my recent invoice. It seems to include a $25 fee that wasn\'t on previous invoices. Could you explain what this charge is for?',
-      date: '2025-05-05T11:20:00Z',
-      read: false,
-      attachments: [
-        { name: 'invoice_may.pdf', size: '245KB' }
-      ]
-    },
-    {
-      id: 5,
-      sender: 'Admin',
-      role: 'Admin',
-      subject: 'Summer Program Announcement',
-      content: 'Dear Parents, We\'re excited to announce our summer program activities! Registration is now open through our parent portal. Please register by May 20th to secure your child\'s spot. Activities include water play, nature exploration, and special weekly themes.',
-      date: '2025-05-02T08:00:00Z',
-      read: true,
-      attachments: [
-        { name: 'summer_program.pdf', size: '1.5MB' }
-      ]
-    }
-  ]);
-  
-  // State for selected message and compose form
-  const [selectedMessage, setSelectedMessage] = useState(null);
-  const [showComposeForm, setShowComposeForm] = useState(false);
-  const [composeData, setComposeData] = useState({
-    recipient: '',
-    subject: '',
-    content: '',
-    attachments: []
-  });
-  const [replyData, setReplyData] = useState({
-    content: '',
-    attachments: []
-  });
-  const [filter, setFilter] = useState('all'); // 'all', 'unread', 'sent'
+  const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Filter messages
-  const filteredMessages = messages.filter(message => {
-    let matchesFilter = true;
-    if (filter === 'unread') {
-      matchesFilter = !message.read;
-    } else if (filter === 'sent') {
-      matchesFilter = message.sender === 'Admin';
-    }
-    
-    const matchesSearch = message.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          message.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          message.sender.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesFilter && matchesSearch;
-  });
-  
-  // Group messages by conversation (using subject as a simple way to group)
-  const groupedMessages = {};
-  filteredMessages.forEach(message => {
-    // Remove "Re: " from subject for grouping purposes
-    const baseSubject = message.subject.replace(/^Re:\s*/i, '');
-    
-    if (!groupedMessages[baseSubject]) {
-      groupedMessages[baseSubject] = [];
-    }
-    
-    groupedMessages[baseSubject].push(message);
-  });
-  
-  // Sort conversations by the date of their most recent message
-  const sortedConversations = Object.entries(groupedMessages).sort((a, b) => {
-    const aLatestDate = new Date(Math.max(...a[1].map(msg => new Date(msg.date))));
-    const bLatestDate = new Date(Math.max(...b[1].map(msg => new Date(msg.date))));
-    return bLatestDate - aLatestDate;
-  });
-  
-  // Handle message selection
-  const handleMessageSelect = (message) => {
-    setSelectedMessage(message);
-    
-    // Mark as read if unread
-    if (!message.read) {
-      const updatedMessages = messages.map(msg => {
-        if (msg.id === message.id) {
-          return { ...msg, read: true };
-        }
-        return msg;
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [selectedParent, setSelectedParent] = useState(null);
+  const [reply, setReply] = useState('');
+
+  // Fetch all messages in real-time
+  useEffect(() => {
+    const q = query(collection(db, 'messages'), orderBy('date', 'asc'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const msgs = [];
+      querySnapshot.forEach((doc) => {
+        msgs.push({ id: doc.id, ...doc.data() });
       });
-      
-      setMessages(updatedMessages);
+      setMessages(msgs);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Compute unread message count for each parent
+  const unreadCounts = {};
+  messages.forEach(msg => {
+    if (
+      msg.sender !== 'Admin' &&
+      msg.recipient === 'Admin' &&
+      !msg.read
+    ) {
+      unreadCounts[msg.sender] = (unreadCounts[msg.sender] || 0) + 1;
     }
-    
-    // Initialize reply form
-    setReplyData({
-      content: '',
-      attachments: []
-    });
-  };
-  
-  // Handle compose form changes
-  const handleComposeChange = (e) => {
-    const { name, value } = e.target;
-    setComposeData({
-      ...composeData,
-      [name]: value
-    });
-  };
-  
-  // Handle reply form changes
-  const handleReplyChange = (e) => {
-    const { name, value } = e.target;
-    setReplyData({
-      ...replyData,
-      [name]: value
-    });
-  };
-  
-  // Handle file upload for compose form
-  const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const fileDetails = files.map(file => ({
-      name: file.name,
-      size: `${(file.size / 1024).toFixed(2)}KB`
-    }));
-    
-    setComposeData({
-      ...composeData,
-      attachments: [...composeData.attachments, ...fileDetails]
-    });
-  };
-  
-  // Handle file upload for reply form
-  const handleReplyFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    const fileDetails = files.map(file => ({
-      name: file.name,
-      size: `${(file.size / 1024).toFixed(2)}KB`
-    }));
-    
-    setReplyData({
-      ...replyData,
-      attachments: [...replyData.attachments, ...fileDetails]
-    });
-  };
-  
-  // Handle compose form submission
-  const handleComposeSend = (e) => {
-    e.preventDefault();
-    
-    const newMessage = {
-      id: messages.length + 1,
-      sender: 'Admin',
-      role: 'Admin',
-      subject: composeData.subject,
-      content: composeData.content,
-      date: new Date().toISOString(),
-      read: true,
-      attachments: composeData.attachments
-    };
-    
-    setMessages([...messages, newMessage]);
-    setShowComposeForm(false);
-    setComposeData({
-      recipient: '',
-      subject: '',
-      content: '',
-      attachments: []
-    });
-  };
-  
-  // Handle reply submission
-  const handleReplySend = (e) => {
-    e.preventDefault();
-    
-    if (!selectedMessage) return;
-    
-    const newMessage = {
-      id: messages.length + 1,
-      sender: 'Admin',
-      role: 'Admin',
-      subject: selectedMessage.subject.startsWith('Re:') 
-        ? selectedMessage.subject 
-        : `Re: ${selectedMessage.subject}`,
-      content: replyData.content,
-      date: new Date().toISOString(),
-      read: true,
-      attachments: replyData.attachments
-    };
-    
-    setMessages([...messages, newMessage]);
-    setReplyData({
-      content: '',
-      attachments: []
-    });
-    
-    // Update the selected message to include the reply
-    setSelectedMessage(newMessage);
-  };
-  
-  // Format date
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (date.toDateString() === today.toDateString()) {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  });
+
+  // Get unique parents
+  const parents = Array.from(
+    new Set(messages.filter(m => m.sender !== 'Admin').map(m => m.sender))
+  );
+
+  // Filter conversations by search
+  const filteredParents = parents.filter(parent =>
+    parent.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Get conversation with selected parent
+  const conversation = selectedParent
+    ? messages.filter(
+        m =>
+          (m.sender === selectedParent && m.recipient === 'Admin') ||
+          (m.sender === 'Admin' && m.recipient === selectedParent)
+      )
+    : [];
+
+  // Mark all unread messages as read when opening a conversation
+  useEffect(() => {
+    if (selectedParent && conversation.length > 0) {
+      conversation.forEach(async (msg) => {
+        if (!msg.read && msg.recipient === 'Admin') {
+          await updateDoc(doc(db, 'messages', msg.id), { read: true });
+        }
+      });
     }
+    // eslint-disable-next-line
+  }, [selectedParent, conversation.length]);
+
+  // Send reply
+  const handleReply = async (e) => {
+    e.preventDefault();
+    if (!reply.trim() || !selectedParent) return;
+    await addDoc(collection(db, 'messages'), {
+      sender: 'Admin',
+      recipient: selectedParent,
+      content: reply,
+      date: serverTimestamp(),
+      read: false,
+    });
+    setReply('');
   };
-  
+
   return (
-    <div className="message-system">
-      <div className="page-header">
-        <h1>Message System</h1>
-        <button 
-          className="compose-btn"
-          onClick={() => setShowComposeForm(true)}
-        >
-          Compose New Message
-        </button>
-      </div>
-      
-      <div className="message-container">
-        <div className="message-sidebar">
-          <div className="message-filters">
-            <button 
-              className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
+    <div style={{ display: 'flex', height: 500 }}>
+      {/* Sidebar: Parent List & Search */}
+      <div style={{
+  width: 260,
+  borderRight: '1px solid #eee',
+  padding: 16,
+  background: '#fafbfc',
+  boxShadow: '2px 0 8px #e5e5ea33',
+  borderRadius: '18px 0 0 18px'
+}}>
+  <input
+    type="text"
+    placeholder="🔍 Search parents…"
+    value={searchTerm}
+    onChange={e => setSearchTerm(e.target.value)}
+    style={{
+      width: '100%',
+      marginBottom: 18,
+      padding: '12px 16px',
+      borderRadius: 16,
+      border: '1px solid #ddd',
+      fontSize: 16,
+      background: '#f7f7fa',
+      outline: 'none',
+      boxShadow: '0 1px 2px #e5e5ea33 inset',
+      transition: 'border 0.2s'
+    }}
+  />
+  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    {filteredParents.map(parent => (
+      <li
+        key={parent}
+        onClick={() => setSelectedParent(parent)}
+        style={{
+          position: 'relative', // for badge positioning
+          padding: '12px 18px',
+          marginBottom: 8,
+          borderRadius: 14,
+          background: selectedParent === parent ? '#d6f6ff' : '#fff',
+          color: selectedParent === parent ? '#007aff' : '#222',
+          fontWeight: selectedParent === parent ? 'bold' : 'normal',
+          fontSize: 17,
+          cursor: 'pointer',
+          boxShadow: selectedParent === parent ? '0 2px 8px #007aff22' : '0 1px 2px #e5e5ea33',
+          border: selectedParent === parent ? '1.5px solid #007aff' : '1px solid #eee',
+          transition: 'all 0.18s',
+        }}
+        onMouseOver={e => {
+          if (selectedParent !== parent) e.currentTarget.style.background = '#f0f8ff';
+        }}
+        onMouseOut={e => {
+          if (selectedParent !== parent) e.currentTarget.style.background = '#fff';
+        }}
+      >
+        {parent}
+        {unreadCounts[parent] > 0 && (
+          <span style={{
+            position: 'absolute',
+            right: 16,
+            top: 10,
+            background: 'red',
+            color: 'white',
+            borderRadius: '50%',
+            padding: '2px 8px',
+            fontSize: 12,
+            fontWeight: 'bold',
+            minWidth: 20,
+            textAlign: 'center',
+            boxShadow: '0 1px 4px #0002'
+          }}>
+            {unreadCounts[parent]}
+          </span>
+        )}
+      </li>
+    ))}
+  </ul>
+</div>
+      {/* Chat Area */}
+      <div style={{ flex: 1, padding: 16, display: 'flex', flexDirection: 'column' }}>
+        {selectedParent ? (
+          <>
+            <h3>Chat with {selectedParent}</h3>
+            <div
+              style={{
+                border: '1px solid #ccc',
+                padding: 16,
+                height: 300,
+                overflowY: 'auto',
+                marginBottom: 16,
+                background: '#e5e5ea',
+                borderRadius: 16,
+                display: 'flex',
+                flexDirection: 'column',
+              }}
             >
-              All Messages
-            </button>
-            <button 
-              className={`filter-btn ${filter === 'unread' ? 'active' : ''}`}
-              onClick={() => setFilter('unread')}
-            >
-              Unread
-            </button>
-            <button 
-              className={`filter-btn ${filter === 'sent' ? 'active' : ''}`}
-              onClick={() => setFilter('sent')}
-            >
-              Sent
-            </button>
-          </div>
-          
-          <div className="search-bar">
-            <input
-              type="text"
-              placeholder="Search messages..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <div className="message-list">
-            {sortedConversations.map(([subject, conversation]) => {
-              const latestMessage = conversation.reduce((latest, current) => {
-                return new Date(current.date) > new Date(latest.date) ? current : latest;
-              });
-              
-              const hasUnread = conversation.some(msg => !msg.read);
-              
-              return (
-                <div 
-                  key={subject}
-                  className={`message-item ${hasUnread ? 'unread' : ''} ${selectedMessage && latestMessage.id === selectedMessage.id ? 'active' : ''}`}
-                  onClick={() => handleMessageSelect(latestMessage)}
-                >
-                  <div className="message-sender">
-                    <span className="sender-name">{latestMessage.sender}</span>
-                    <span className="message-date">{formatDate(latestMessage.date)}</span>
-                  </div>
-                  <div className="message-subject">{latestMessage.subject}</div>
-                  <div className="message-preview">
-                    {latestMessage.content.substring(0, 60)}
-                    {latestMessage.content.length > 60 ? '...' : ''}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        
-        <div className="message-content">
-          {selectedMessage ? (
-            <div className="selected-message">
-              <div className="message-header">
-                <h2>{selectedMessage.subject}</h2>
-                <div className="message-meta">
-                  <div className="sender-info">
-                    <span className="sender-name">From: {selectedMessage.sender}</span>
-                    <span className="sender-role">({selectedMessage.role})</span>
-                  </div>
-                  <div className="message-date">
-                    {new Date(selectedMessage.date).toLocaleString('en-US', {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
-                </div>
-              </div>
-              
-              <div className="message-body">
-                <p>{selectedMessage.content}</p>
-              </div>
-              
-              {selectedMessage.attachments.length > 0 && (
-                <div className="message-attachments">
-                  <h3>Attachments</h3>
-                  <div className="attachment-list">
-                    {selectedMessage.attachments.map((attachment, index) => (
-                      <div key={index} className="attachment-item">
-                        <span className="attachment-icon">📎</span>
-                        <span className="attachment-name">{attachment.name}</span>
-                        <span className="attachment-size">({attachment.size})</span>
-                        <button className="download-btn">Download</button>
+              {conversation
+                .sort((a, b) => (a.date?.seconds || 0) - (b.date?.seconds || 0))
+                .map((msg) => {
+                  const isMe = msg.sender === 'Admin';
+                  return (
+                    <div
+                      key={msg.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: isMe ? 'flex-end' : 'flex-start',
+                        margin: '6px 0',
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: isMe ? '#007aff' : '#fff',
+                          color: isMe ? '#fff' : '#222',
+                          borderRadius: 20,
+                          padding: '10px 16px',
+                          maxWidth: '70%',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.07)',
+                          fontSize: 16,
+                          position: 'relative',
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: 13, marginBottom: 2 }}>
+                          {isMe ? 'You' : msg.sender}
+                        </div>
+                        <div>{msg.content}</div>
+                        <div style={{
+                          fontSize: 11,
+                          color: isMe ? '#d1eaff' : '#888',
+                          marginTop: 4,
+                          textAlign: 'right'
+                        }}>
+                          {msg.date?.toDate ? msg.date.toDate().toLocaleTimeString() : ''}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="reply-form">
-                <h3>Reply</h3>
-                <form onSubmit={handleReplySend}>
-                  <div className="form-group">
-                    <textarea
-                      name="content"
-                      value={replyData.content}
-                      onChange={handleReplyChange}
-                      placeholder="Type your reply here..."
-                      rows="5"
-                      required
-                    ></textarea>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label htmlFor="replyAttachments">Attachments</label>
-                    <input
-                      type="file"
-                      id="replyAttachments"
-                      multiple
-                      onChange={handleReplyFileUpload}
-                    />
-                  </div>
-                  
-                  {replyData.attachments.length > 0 && (
-                    <div className="selected-attachments">
-                      <h4>Selected Files:</h4>
-                      <ul>
-                        {replyData.attachments.map((file, index) => (
-                          <li key={index}>
-                            {file.name} ({file.size})
-                          </li>
-                        ))}
-                      </ul>
                     </div>
-                  )}
-                  
-                  <div className="form-actions">
-                    <button type="submit" className="send-btn">Send Reply</button>
-                  </div>
-                </form>
-              </div>
+                  );
+                })}
             </div>
-          ) : (
-            <div className="no-message-selected">
-              <p>Select a message to view its contents</p>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Compose Message Modal */}
-      {showComposeForm && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-header">
-              <h2>Compose New Message</h2>
-              <button 
-                className="close-btn"
-                onClick={() => setShowComposeForm(false)}
+            <form onSubmit={handleReply} style={{
+              display: 'flex',
+              gap: 8,
+              alignItems: 'center',
+              marginTop: 8,
+              background: '#fff',
+              borderRadius: 24,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+              padding: 6,
+            }}>
+              <input
+                type="text"
+                value={reply}
+                onChange={e => setReply(e.target.value)}
+                placeholder="Type your message…"
+                style={{
+                  flex: 1,
+                  padding: '12px 18px',
+                  borderRadius: 20,
+                  border: 'none',
+                  fontSize: 16,
+                  outline: 'none',
+                  background: '#f7f7fa',
+                  color: '#222',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.03) inset',
+                  transition: 'background 0.2s',
+                }}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: 20,
+                  background: reply.trim() ? '#007aff' : '#b0b0b0',
+                  color: '#fff',
+                  border: 'none',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                  cursor: reply.trim() ? 'pointer' : 'not-allowed',
+                  boxShadow: reply.trim() ? '0 2px 8px #007aff33' : 'none',
+                  transition: 'background 0.2s, box-shadow 0.2s',
+                }}
+                disabled={!reply.trim()}
+                onMouseOver={e => {
+                  if (reply.trim()) e.currentTarget.style.background = '#005ecb';
+                }}
+                onMouseOut={e => {
+                  if (reply.trim()) e.currentTarget.style.background = '#007aff';
+                }}
               >
-                &times;
+                💬 Send
               </button>
-            </div>
-            
-            <form onSubmit={handleComposeSend}>
-              <div className="form-group">
-                <label htmlFor="recipient">To</label>
-                <select
-                  id="recipient"
-                  name="recipient"
-                  value={composeData.recipient}
-                  onChange={handleComposeChange}
-                  required
-                >
-                  <option value="">Select Recipient</option>
-                  <option value="all">All Parents</option>
-                  <option value="Sarah Thompson">Sarah Thompson</option>
-                  <option value="Maria Garcia">Maria Garcia</option>
-                  <option value="Juan Martinez">Juan Martinez</option>
-                  <option value="James Johnson">James Johnson</option>
-                  <option value="Emily Wilson">Emily Wilson</option>
-                </select>
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="subject">Subject</label>
-                <input
-                  type="text"
-                  id="subject"
-                  name="subject"
-                  value={composeData.subject}
-                  onChange={handleComposeChange}
-                  required
-                />
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="content">Message</label>
-                <textarea
-                  id="content"
-                  name="content"
-                  value={composeData.content}
-                  onChange={handleComposeChange}
-                  rows="8"
-                  required
-                ></textarea>
-              </div>
-              
-              <div className="form-group">
-                <label htmlFor="attachments">Attachments</label>
-                <input
-                  type="file"
-                  id="attachments"
-                  multiple
-                  onChange={handleFileUpload}
-                />
-              </div>
-              
-              {composeData.attachments.length > 0 && (
-                <div className="selected-attachments">
-                  <h4>Selected Files:</h4>
-                  <ul>
-                    {composeData.attachments.map((file, index) => (
-                      <li key={index}>
-                        {file.name} ({file.size})
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              <div className="form-actions">
-                <button type="submit" className="send-btn">Send Message</button>
-                <button 
-                  type="button" 
-                  className="cancel-btn"
-                  onClick={() => setShowComposeForm(false)}
-                >
-                  Cancel
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        ) : (
+          <div style={{ color: '#888' }}>Select a parent to view chat history.</div>
+        )}
+      </div>
     </div>
   );
 };

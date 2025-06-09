@@ -3,10 +3,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { db } from '../../../lib/firebase';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 
 const AdminSidebar = () => {
   const pathname = usePathname();
-  
+  const [unreadCount, setUnreadCount] = useState(0);
+
   // Define menu items
   const menuItems = [
     { icon: '📊', label: 'Dashboard', path: '/admin' },
@@ -30,6 +34,21 @@ const AdminSidebar = () => {
   const isActive = (path) => {
     return pathname === path;
   };
+
+  useEffect(() => {
+    const q = query(collection(db, 'messages'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      let count = 0;
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.recipient === 'Admin' && !data.read) {
+          count += 1;
+        }
+      });
+      setUnreadCount(count);
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="admin-sidebar">
@@ -76,6 +95,13 @@ const AdminSidebar = () => {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="notification-bell">
+        <span className="notification-icon">🔔</span>
+        {unreadCount > 0 && (
+          <span className="notification-badge">{unreadCount}</span>
+        )}
       </div>
     </div>
   );

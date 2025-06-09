@@ -1,25 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { db } from '../../lib/firebase';
+import { collection, query, onSnapshot } from 'firebase/firestore';
 
 export default function AdminDashboardLayout({ children }) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
   const router = useRouter();
-  
+
+  // Firestore unread message count for admin
+  useEffect(() => {
+    const q = query(collection(db, 'messages'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      let count = 0;
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.recipient === 'Admin' && !data.read) {
+          count += 1;
+        }
+      });
+      setUnreadCount(count);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const handleSearch = (e) => {
     e.preventDefault();
-    // Search functionality would be implemented here
     console.log('Searching for:', searchQuery);
   };
-  
+
   const handleLogout = () => {
-    // Logout functionality would be implemented here with Firebase
     console.log('Logging out');
     router.push('/');
   };
-  
+
   return (
     <div className="dashboard-layout">
       <header className="dashboard-header">
@@ -168,7 +185,9 @@ export default function AdminDashboardLayout({ children }) {
             <div className="user-menu">
               <div className="notification-bell">
                 <span className="notification-icon">🔔</span>
-                <span className="notification-badge">1</span>
+                {unreadCount > 0 && (
+                  <span className="notification-badge">{unreadCount}</span>
+                )}
               </div>
               
               <div className="user-profile">
