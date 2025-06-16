@@ -11,10 +11,12 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^3.7.0",
     "@stripe/stripe-js": "^7.3.0",
+    "date-fns": "^4.1.0",
     "firebase": "^11.7.3",
     "next": "15.3.2",
     "nodemailer": "^7.0.3",
     "react": "^19.0.0",
+    "react-big-calendar": "^1.19.3",
     "react-calendar": "^6.0.0",
     "react-dom": "^19.0.0",
     "stripe": "^18.1.1",

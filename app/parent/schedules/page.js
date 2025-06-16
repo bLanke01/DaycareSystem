@@ -1,17 +1,15 @@
 "use client";
 
-// jun, just keep working here for the parent side of schedulecalendar. any changes you made on the file needs to have comment properly so that we know what else we missing before we push to your branch. see my imports below if you need help to fix your errors so you can connect your stuff properly.
-
 import { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
-// import { db } from "@/firebase/firebaseconfig";
+import { db } from "../../firebase/config";
 
-// import { Calendar, dateFnsLocalizer } from "react-big-calendar";
-// import format from "date-fns/format";
-// import parse from "date-fns/parse";
-// import startOfWeek from "date-fns/startOfWeek";
-// import getDay from "date-fns/getDay";
-// import "react-big-calendar/lib/css/react-big-calendar.css";
+import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import format from "date-fns/format";
+import parse from "date-fns/parse";
+import startOfWeek from "date-fns/startOfWeek";
+import getDay from "date-fns/getDay";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
 const locales = {
   "en-US": require("date-fns/locale/en-US"),
@@ -27,6 +25,8 @@ const localizer = dateFnsLocalizer({
 
 export default function ParentSchedules() {
   const [events, setEvents] = useState([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentView, setCurrentView] = useState("month");
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, "calendarEvents"), (snapshot) => {
@@ -50,9 +50,13 @@ export default function ParentSchedules() {
         startAccessor="start"
         endAccessor="end"
         style={{ height: 500 }}
+        date={currentDate}
+        view={currentView}
+        onNavigate={(date) => setCurrentDate(date)}
+        onView={(view) => setCurrentView(view)}
         tooltipAccessor={(event) =>
-          `${event.title} | ${event.start.toLocaleTimeString()} - ${event.end.toLocaleTimeString()}`
-        }
+          `${event.title} (${format(event.start, "hh:mm a")} - ${format(event.end, "hh:mm a")})`
+        }        
       />
     </div>
   );
