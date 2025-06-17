@@ -14,6 +14,7 @@ import {
   doc,
   serverTimestamp
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const MessageSystem = () => {
   const [messages, setMessages] = useState([]);
@@ -21,6 +22,16 @@ const MessageSystem = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [selectedParent, setSelectedParent] = useState(null);
   const [reply, setReply] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+
+  // Get logged-in admin's email
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) setAdminEmail(user.email);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Fetch all messages in real-time
   useEffect(() => {
@@ -178,14 +189,17 @@ const MessageSystem = () => {
             <div
               style={{
                 border: '1px solid #ccc',
-                padding: 16,
-                height: 300,
+                padding: 32,
+                height: 600,
                 overflowY: 'auto',
-                marginBottom: 16,
+                marginBottom: 32,
                 background: '#e5e5ea',
-                borderRadius: 16,
+                borderRadius: 24,
                 display: 'flex',
                 flexDirection: 'column',
+                width: '100%',
+                maxWidth: 1600,
+                margin: '0 auto',
               }}
             >
               {conversation

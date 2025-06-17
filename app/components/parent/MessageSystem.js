@@ -3,33 +3,33 @@
 import { useEffect, useState } from 'react';
 import { db } from '../../firebase/config';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 export default function ParentMessagesPage() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [parentName, setParentName] = useState('');
-  const [nameInput, setNameInput] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
 
-  // Prompt for name if not set
-  const handleSetName = (e) => {
-    e.preventDefault();
-    if (nameInput.trim()) {
-      setParentName(nameInput.trim());
-    }
-  };
-
-  // Fetch messages for this parent (by name)
+  // Get logged-in parent's email
   useEffect(() => {
-    if (!parentName) return;
+    const auth = getAuth();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) setParentEmail(user.email);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch messages between this parent and admin
+  useEffect(() => {
+    if (!parentEmail) return;
     const q = query(collection(db, 'messages'), orderBy('date', 'asc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const msgs = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        // Only show messages between this parent and admin
         if (
-          (data.sender === parentName && data.recipient === 'Admin') ||
-          (data.sender === 'Admin' && data.recipient === parentName)
+          (data.sender === parentEmail && data.recipient === 'Admin') ||
+          (data.sender === 'Admin' && data.recipient === parentEmail)
         ) {
           msgs.push({ id: doc.id, ...data });
         }
@@ -37,52 +37,20 @@ export default function ParentMessagesPage() {
       setMessages(msgs);
     });
     return () => unsubscribe();
-  }, [parentName]);
-
-  // Mark all unread messages sent to this parent as read
-  useEffect(() => {
-    if (!parentName) return;
-    messages.forEach(async (msg) => {
-      if (!msg.read && msg.recipient === parentName) {
-        await updateDoc(doc(db, 'messages', msg.id), { read: true });
-      }
-    });
-  }, [messages, parentName]);
+  }, [parentEmail]);
 
   const handleSend = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !parentName) return;
-    try {
-      await addDoc(collection(db, 'messages'), {
-        sender: parentName,
-        recipient: 'Admin',
-        content: newMessage,
-        date: serverTimestamp(),
-        read: false,
-      });
-      setNewMessage('');
-    } catch (err) {
-      console.error('Error sending message:', err);
-    }
+    if (!newMessage.trim() || !parentEmail) return;
+    await addDoc(collection(db, 'messages'), {
+      sender: parentEmail,
+      recipient: 'Admin',
+      content: newMessage,
+      date: serverTimestamp(),
+      read: false,
+    });
+    setNewMessage('');
   };
-
-  if (!parentName) {
-    return (
-      <div style={{ maxWidth: 400, margin: '0 auto', padding: 32 }}>
-        <h2>Enter Your Name or Email</h2>
-        <form onSubmit={handleSetName} style={{ display: 'flex', gap: 8 }}>
-          <input
-            type="text"
-            placeholder="Your name or email"
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            style={{ flex: 1, padding: 8 }}
-          />
-          <button type="submit" style={{ padding: '8px 16px' }}>Continue</button>
-        </form>
-      </div>
-    );
-  }
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 16 }}>
@@ -90,20 +58,23 @@ export default function ParentMessagesPage() {
       <div
         style={{
           border: '1px solid #ccc',
-          padding: 16,
-          height: 300,
+          padding: 32,
+          height: 600,
           overflowY: 'auto',
-          marginBottom: 16,
+          marginBottom: 32,
           background: '#e5e5ea',
-          borderRadius: 16,
+          borderRadius: 24,
           display: 'flex',
           flexDirection: 'column',
+          width: '100%',
+          maxWidth: 1600, 
+          margin: '0 auto',
         }}
       >
         {messages
           .sort((a, b) => (a.date?.seconds || 0) - (b.date?.seconds || 0))
           .map((msg) => {
-            const isMe = msg.sender === parentName;
+            const isMe = msg.sender === parentEmail;
             return (
               <div
                 key={msg.id}
@@ -168,6 +139,7 @@ export default function ParentMessagesPage() {
       color: '#222',
       boxShadow: '0 1px 2px rgba(0,0,0,0.03) inset',
       transition: 'background 0.2s',
+      width: '100%',
     }}
   />
   <button
