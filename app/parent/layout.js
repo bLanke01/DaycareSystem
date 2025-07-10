@@ -136,6 +136,17 @@ const ParentDashboardLayout = ({ children }) => {
                   <span className="text-xl">📅</span>Schedules & Calendar
                 </Link>
               </li>
+
+              <li>
+                <Link
+                  href="/parent/meals" 
+                  className={isActive('/parent/meals') ? 'active' : ''}
+                >
+                  <span className="text-xl">🍽️</span> Meal Plans
+                </Link>
+              </li>
+
+              
               <li>
                 <Link 
                   href="/parent/invoices" 
@@ -152,6 +163,7 @@ const ParentDashboardLayout = ({ children }) => {
                   <span className="text-xl">💬</span>Message System
                 </Link>
               </li>
+              
 
               <li className="menu-title mt-4">Others</li>
               <li>
