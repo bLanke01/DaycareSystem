@@ -1,21 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../firebase/auth-context';
 import { withAuth } from '../utils/with-auth';
+import AdminSidebar from '../components/layout/AdminSidebar';
+import Breadcrumbs from '../components/layout/Breadcrumbs';
+import SearchSystem from '../components/admin/SearchSystem';
+import ChildDetailsModal from '../components/admin/ChildDetailsModal';
 
 const AdminDashboardLayout = ({ children }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedChild, setSelectedChild] = useState(null);
+  const [showChildModal, setShowChildModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   const router = useRouter();
   const pathname = usePathname();
-  const { logOut } = useAuth();
-  
-  const handleSearch = (e) => {
-    e.preventDefault();
-    console.log('Searching for:', searchQuery);
-  };
+  const { user, logOut } = useAuth();
   
   const handleLogout = async () => {
     const { success, error } = await logOut();
@@ -26,219 +28,265 @@ const AdminDashboardLayout = ({ children }) => {
     }
   };
 
-  const isActive = (path) => pathname === path;
-  
+  const handleChildClick = (child) => {
+    setSelectedChild(child);
+    setShowChildModal(true);
+    setActiveTab('overview');
+  };
+
+  const handleCloseChildModal = () => {
+    setShowChildModal(false);
+    setSelectedChild(null);
+  };
+
+  // Close sidebar when route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Close sidebar on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [sidebarOpen]);
+
+  // Get page title from pathname
+  const getPageTitle = () => {
+    const pathSegments = pathname.split('/').filter(Boolean);
+    if (pathSegments.length <= 1) return 'Dashboard';
+    
+    const pageMap = {
+      'children': 'Children Management',
+      'activity-log': 'Activity Log',
+      'messages': 'Messages',
+      'schedules': 'Schedules',
+      'meals': 'Meal Planning',
+      'nap-track': 'Nap Tracking',
+      'attendance': 'Attendance',
+      'invoices': 'Invoices',
+      'settings': 'Settings',
+      'account': 'Account',
+      'help': 'Help Center'
+    };
+    
+    const lastSegment = pathSegments[pathSegments.length - 1];
+    return pageMap[lastSegment] || lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1).replace(/-/g, ' ');
+  };
+
   return (
-    <div className="min-h-screen bg-base-200">
-      {/* Drawer for mobile */}
+    <div className="min-h-screen bg-gradient-to-br from-base-200 to-base-300">
+      {/* Skip Links */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 bg-primary text-primary-content px-4 py-2 rounded-md"
+      >
+        Skip to main content
+      </a>
+      
+      <a 
+        href="#admin-navigation" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-32 focus:z-50 bg-primary text-primary-content px-4 py-2 rounded-md"
+      >
+        Skip to navigation
+      </a>
+
+      {/* Enhanced Drawer Layout */}
       <div className="drawer lg:drawer-open">
-        <input id="dashboard-drawer" type="checkbox" className="drawer-toggle" />
+        <input 
+          id="admin-drawer" 
+          type="checkbox" 
+          className="drawer-toggle" 
+          checked={sidebarOpen}
+          onChange={(e) => setSidebarOpen(e.target.checked)}
+        />
         
-        {/* Drawer content */}
+        {/* Main Content Area */}
         <div className="drawer-content flex flex-col">
-          {/* Navbar */}
-          <div className="navbar bg-base-100 shadow-lg lg:hidden">
-            <div className="flex-none">
-              <label htmlFor="dashboard-drawer" className="btn btn-square btn-ghost drawer-button">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-5 h-5 stroke-current">
+          {/* Enhanced Top Navigation Bar */}
+          <header className="navbar bg-base-100 shadow-lg border-b border-base-300 min-h-16 py-2" role="banner">
+            <div className="flex-none lg:hidden">
+              <button 
+                className="btn btn-square btn-ghost drawer-button"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Open navigation menu"
+                aria-expanded={sidebarOpen}
+                aria-controls="admin-navigation"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  className="inline-block w-5 h-5 stroke-current"
+                  aria-hidden="true"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
-              </label>
+              </button>
             </div>
-            <div className="flex-1">
-              <span className="text-xl font-bold">Staff Dashboard</span>
+            
+            {/* Logo and Title Section */}
+            <div className="flex-1 px-3">
+              
+            </div>
+
+            {/* Center Search */}
+            <div className="flex-none hidden lg:block">
+              <SearchSystem className="w-72" onChildClick={handleChildClick} />
+            </div>
+
+            {/* Right Actions */}
+            <div className="flex-none flex items-center gap-2 px-3">
+              {/* Notifications */}
+              <div className="dropdown dropdown-end">
+                <button 
+                  tabIndex={0} 
+                  className="btn btn-ghost btn-circle indicator"
+                  aria-label="View notifications"
+                  aria-haspopup="true"
+                >
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  <span className="badge badge-xs badge-primary indicator-item">1</span>
+                </button>
+                <ul 
+                  tabIndex={0} 
+                  className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-64 border border-base-300"
+                  role="menu"
+                  aria-label="Notifications menu"
+                >
+                  <li className="menu-title">
+                    <span>Notifications</span>
+                  </li>
+                  <li role="none">
+                    <a role="menuitem" className="flex items-start gap-3 py-3">
+                      <div className="avatar placeholder">
+                        <div className="bg-info text-info-content rounded-full w-8 h-8">
+                          <span className="text-xs">💬</span>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">New message from parent</p>
+                      </div>
+                    </a>
+                  </li>
+                  <li role="none">
+                    <Link href="/admin/messages" role="menuitem" className="text-sm text-primary">
+                      View all notifications →
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+
+              {/* User Menu */}
+              <div className="dropdown dropdown-end">
+                <button 
+                  tabIndex={0} 
+                  className="btn btn-ghost btn-circle avatar"
+                  aria-label={`User menu for ${user?.email || 'admin'}`}
+                  aria-haspopup="true"
+                >
+                  <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center ring-1 ring-primary ring-offset-1 ring-offset-base-100">
+                    <span className="text-sm font-bold">
+                      {user?.email?.charAt(0).toUpperCase() || 'A'}
+                    </span>
+                  </div>
+                </button>
+                <ul 
+                  tabIndex={0} 
+                  className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300"
+                  role="menu"
+                  aria-label="User account menu"
+                >
+                  <li className="menu-title">
+                    <span className="truncate">{user?.email}</span>
+                  </li>
+                  <li role="none">
+                    <Link href="/admin/account" role="menuitem" className="flex items-center gap-2">
+                      <span>👤</span>
+                      <span>Profile</span>
+                    </Link>
+                  </li>
+                  <li role="none">
+                    <Link href="/admin/settings" role="menuitem" className="flex items-center gap-2">
+                      <span>⚙️</span>
+                      <span>Settings</span>
+                    </Link>
+                  </li>
+                  <li role="none">
+                    <Link href="/admin/help" role="menuitem" className="flex items-center gap-2">
+                      <span>❓</span>
+                      <span>Help</span>
+                    </Link>
+                  </li>
+                  <div className="divider my-1"></div>
+                  <li role="none">
+                    <button onClick={handleLogout} role="menuitem" className="text-error flex items-center gap-2">
+                      <span>🚪</span>
+                      <span>Logout</span>
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </header>
+
+          {/* Page Title Bar */}
+          <div className="bg-base-100 border-b border-base-300 px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <h2 className="text-2xl font-bold text-base-content">{getPageTitle()}</h2>
+                <Breadcrumbs className="text-sm" />
+              </div>
+              
+              {/* Mobile Search */}
+              <div className="sm:hidden">
+                <SearchSystem className="w-60" onChildClick={handleChildClick} />
+              </div>
             </div>
           </div>
 
-          {/* Main content */}
-          <main className="flex-1 p-4 lg:p-6">
-            {/* Top bar */}
-            <div className="flex flex-col lg:flex-row justify-between gap-4 mb-6">
-              <div className="form-control flex-1 max-w-xs">
-                <form onSubmit={handleSearch} className="input-group">
-                  <input 
-                    type="text" 
-                    placeholder="Search..." 
-                    className="input input-bordered w-full"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <button className="btn btn-square">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </button>
-                </form>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="dropdown dropdown-end">
-                  <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
-                    <div className="indicator">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                      </svg>
-                      <span className="badge badge-sm badge-primary indicator-item">1</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="dropdown dropdown-end">
-                  <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar placeholder">
-                    <div className="bg-neutral text-neutral-content rounded-full w-10">
-                      <span>DB</span>
-                    </div>
-                  </div>
-                  <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-                    <li><Link href="/admin/account">Profile</Link></li>
-                    <li><Link href="/admin/settings">Settings</Link></li>
-                    <li><button onClick={handleLogout}>Logout</button></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Page content */}
-            <div className="bg-base-100 rounded-box p-6 min-h-[calc(100vh-12rem)]">
+          {/* Main Content */}
+          <main className="flex-1 p-4 lg:p-6" role="main" id="main-content">
+            {/* Page Content with enhanced styling */}
+            <div className="bg-base-100 rounded-xl shadow-lg border border-base-300 p-6 min-h-[calc(100vh-16rem)]">
               {children}
             </div>
           </main>
         </div>
 
-        {/* Drawer side */}
-        <div className="drawer-side z-40">
-          <label htmlFor="dashboard-drawer" aria-label="close sidebar" className="drawer-overlay"></label>
-          <div className="menu p-4 w-80 min-h-full bg-base-100 text-base-content">
-            {/* Sidebar content */}
-            <div className="flex items-center gap-2 mb-8 px-2">
-              <div className="avatar placeholder">
-                <div className="bg-primary text-primary-content rounded-lg w-12">
-                  <span className="text-xl">D</span>
-                </div>
-              </div>
-              <span className="text-xl font-bold">Daycare Management</span>
-            </div>
-
-            <ul className="menu menu-lg">
-              <li className="menu-title">Menu</li>
-              <li>
-                <Link 
-                  href="/admin" 
-                  className={isActive('/admin') ? 'active' : ''}
-                >
-                  <span className="text-xl">📊</span>Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/admin/schedules" 
-                  className={isActive('/admin/schedules') ? 'active' : ''}
-                >
-                  <span className="text-xl">📅</span>Schedules & Calendar
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/admin/invoices" 
-                  className={isActive('/admin/invoices') ? 'active' : ''}
-                >
-                  <span className="text-xl">💰</span>Invoice
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/admin/messages" 
-                  className={isActive('/admin/messages') ? 'active' : ''}
-                >
-                  <span className="text-xl">💬</span>Message System
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/admin/children" 
-                  className={isActive('/admin/children') ? 'active' : ''}
-                >
-                  <span className="text-xl">👶</span>Manage Children
-                </Link>
-              </li>
-              <li>
-                <details>
-                  <summary>
-                    <span className="text-xl">📝</span>Child Records
-                  </summary>
-                  <ul>
-                    <li>
-                      <Link 
-                        href="/admin/attendance"
-                        className={isActive('/admin/attendance') ? 'active' : ''}
-                      >
-                        Attendance
-                      </Link>
-                    </li>
-                    <li>
-                      <Link 
-                        href="/admin/activity-log"
-                        className={isActive('/admin/activity-log') ? 'active' : ''}
-                      >
-                        Activity Log
-                      </Link>
-                    </li>
-                    <li>
-                      <Link 
-                        href="/admin/meals"
-                        className={isActive('/admin/meals') ? 'active' : ''}
-                      >
-                        Meals
-                      </Link>
-                    </li>
-                    <li>
-                      <Link 
-                        href="/admin/nap-track"
-                        className={isActive('/admin/nap-track') ? 'active' : ''}
-                      >
-                        Nap Track
-                      </Link>
-                    </li>
-                  </ul>
-                </details>
-              </li>
-
-              <li className="menu-title mt-4">Others</li>
-              <li>
-                <Link 
-                  href="/admin/settings"
-                  className={isActive('/admin/settings') ? 'active' : ''}
-                >
-                  <span className="text-xl">⚙️</span>Settings
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/admin/account"
-                  className={isActive('/admin/account') ? 'active' : ''}
-                >
-                  <span className="text-xl">👤</span>Accounts
-                </Link>
-              </li>
-              <li>
-                <Link 
-                  href="/admin/help"
-                  className={isActive('/admin/help') ? 'active' : ''}
-                >
-                  <span className="text-xl">❓</span>Help
-                </Link>
-              </li>
-              <li>
-                <button onClick={handleLogout} className="text-error">
-                  <span className="text-xl">🚪</span>Logout
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
+                {/* Enhanced Sidebar */}
+        <AdminSidebar 
+          isOpen={sidebarOpen} 
+          onClose={() => setSidebarOpen(false)}
+          id="admin-navigation"
+        />
       </div>
+
+      {/* Child Details Modal */}
+      {showChildModal && selectedChild && (
+        <ChildDetailsModal 
+          child={selectedChild}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onClose={handleCloseChildModal}
+        />
+      )}
     </div>
   );
 };
-
-// Export the layout wrapped with authentication protection
+  
 export default withAuth(AdminDashboardLayout, 'admin');

@@ -4,14 +4,14 @@
 
 import { useEffect, useState } from "react";
 import { collection, onSnapshot } from "firebase/firestore";
-// import { db } from "@/firebase/firebaseconfig";
+import { db } from "../../firebase/config";
 
-// import { Calendar, dateFnsLocalizer } from "react-big-calendar";
-// import format from "date-fns/format";
-// import parse from "date-fns/parse";
-// import startOfWeek from "date-fns/startOfWeek";
-// import getDay from "date-fns/getDay";
-// import "react-big-calendar/lib/css/react-big-calendar.css";
+import { Calendar, dateFnsLocalizer } from "react-big-calendar";
+import format from "date-fns/format";
+import parse from "date-fns/parse";
+import startOfWeek from "date-fns/startOfWeek";
+import getDay from "date-fns/getDay";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
 const locales = {
   "en-US": require("date-fns/locale/en-US"),

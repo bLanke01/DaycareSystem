@@ -19,77 +19,117 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
     if (!child.id) return;
 
     const unsubscribes = [];
+    let isMounted = true;
 
-    // Listen to activities
+    // Listen to activities - remove orderBy to avoid composite index requirement
     const activitiesQuery = query(
       collection(db, 'activities'),
-      where('childId', '==', child.id),
-      orderBy('date', 'desc')
+      where('childId', '==', child.id)
     );
     
     unsubscribes.push(
       onSnapshot(activitiesQuery, (snapshot) => {
+        if (!isMounted) return;
         const activitiesData = [];
         snapshot.forEach(doc => {
           activitiesData.push({ id: doc.id, ...doc.data() });
         });
+        // Sort by date on client side
+        activitiesData.sort((a, b) => {
+          const dateA = new Date(a.date || a.createdAt || 0);
+          const dateB = new Date(b.date || b.createdAt || 0);
+          return dateB - dateA; // descending order
+        });
         setActivities(activitiesData);
+      }, (error) => {
+        console.error('Error fetching activities:', error);
+        if (isMounted) setActivities([]);
       })
     );
 
-    // Listen to attendance
+    // Listen to attendance - remove orderBy to avoid composite index requirement
     const attendanceQuery = query(
       collection(db, 'attendance'),
-      where('childId', '==', child.id),
-      orderBy('date', 'desc')
+      where('childId', '==', child.id)
     );
     
     unsubscribes.push(
       onSnapshot(attendanceQuery, (snapshot) => {
+        if (!isMounted) return;
         const attendanceData = [];
         snapshot.forEach(doc => {
           attendanceData.push({ id: doc.id, ...doc.data() });
         });
+        // Sort by date on client side
+        attendanceData.sort((a, b) => {
+          const dateA = new Date(a.date || a.createdAt || 0);
+          const dateB = new Date(b.date || b.createdAt || 0);
+          return dateB - dateA; // descending order
+        });
         setAttendance(attendanceData);
+      }, (error) => {
+        console.error('Error fetching attendance:', error);
+        if (isMounted) setAttendance([]);
       })
     );
 
-    // Listen to meals
+    // Listen to meals - remove orderBy to avoid composite index requirement
     const mealsQuery = query(
       collection(db, 'childMeals'),
-      where('childId', '==', child.id),
-      orderBy('date', 'desc')
+      where('childId', '==', child.id)
     );
     
     unsubscribes.push(
       onSnapshot(mealsQuery, (snapshot) => {
+        if (!isMounted) return;
         const mealsData = [];
         snapshot.forEach(doc => {
           mealsData.push({ id: doc.id, ...doc.data() });
         });
+        // Sort by date on client side
+        mealsData.sort((a, b) => {
+          const dateA = new Date(a.date || a.createdAt || 0);
+          const dateB = new Date(b.date || b.createdAt || 0);
+          return dateB - dateA; // descending order
+        });
         setMeals(mealsData);
+      }, (error) => {
+        console.error('Error fetching meals:', error);
+        if (isMounted) setMeals([]);
       })
     );
 
-    // Listen to naps
+    // Listen to naps - remove orderBy to avoid composite index requirement
     const napsQuery = query(
       collection(db, 'naps'),
-      where('childId', '==', child.id),
-      orderBy('date', 'desc')
+      where('childId', '==', child.id)
     );
     
     unsubscribes.push(
       onSnapshot(napsQuery, (snapshot) => {
+        if (!isMounted) return;
         const napsData = [];
         snapshot.forEach(doc => {
           napsData.push({ id: doc.id, ...doc.data() });
         });
+        // Sort by date on client side
+        napsData.sort((a, b) => {
+          const dateA = new Date(a.date || a.createdAt || 0);
+          const dateB = new Date(b.date || b.createdAt || 0);
+          return dateB - dateA; // descending order
+        });
         setNaps(napsData);
+      }, (error) => {
+        console.error('Error fetching naps:', error);
+        if (isMounted) setNaps([]);
       })
     );
 
     return () => {
-      unsubscribes.forEach(unsubscribe => unsubscribe());
+      isMounted = false;
+      unsubscribes.forEach(unsubscribe => {
+        if (unsubscribe) unsubscribe();
+      });
     };
   }, [child.id]);
 
@@ -97,6 +137,12 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
   const handleUpdateChild = async (updatedData) => {
     try {
       setLoading(true);
+      setError('');
+      
+      if (!child.id) {
+        throw new Error('Child ID is missing');
+      }
+
       await updateDoc(doc(db, 'children', child.id), {
         ...updatedData,
         updatedAt: new Date().toISOString()
@@ -114,6 +160,12 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
   const handleAddActivity = async (activityData) => {
     try {
       setLoading(true);
+      setError('');
+      
+      if (!child.id) {
+        throw new Error('Child ID is missing');
+      }
+
       await addDoc(collection(db, 'activities'), {
         childId: child.id,
         childName: `${child.firstName} ${child.lastName}`,
@@ -132,11 +184,17 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
   const handleMarkAttendance = async (attendanceData) => {
     try {
       setLoading(true);
+      setError('');
+      
+      if (!child.id) {
+        throw new Error('Child ID is missing');
+      }
+
       const today = new Date().toISOString().split('T')[0];
       
       // Check if attendance already exists for today
       const existingAttendance = attendance.find(att => 
-        att.date.split('T')[0] === today
+        att.date && att.date.split('T')[0] === today
       );
 
       if (existingAttendance) {
@@ -165,6 +223,12 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
   const handleRecordMeal = async (mealData) => {
     try {
       setLoading(true);
+      setError('');
+      
+      if (!child.id) {
+        throw new Error('Child ID is missing');
+      }
+
       await addDoc(collection(db, 'childMeals'), {
         childId: child.id,
         childName: `${child.firstName} ${child.lastName}`,
@@ -184,6 +248,12 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
   const handleRecordNap = async (napData) => {
     try {
       setLoading(true);
+      setError('');
+      
+      if (!child.id) {
+        throw new Error('Child ID is missing');
+      }
+
       await addDoc(collection(db, 'naps'), {
         childId: child.id,
         childName: `${child.firstName} ${child.lastName}`,
