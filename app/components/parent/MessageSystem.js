@@ -1,7 +1,7 @@
 //Ji, i didnt use component for message system on this part but i put yours here and linked it to the admin/parent/message like you did so you can continue working here for your part. for notifications, theres already a js file you can use in here so please check if you need it. they are made so you are able to send notifications through emails if they marked "check" on email notications.
 
 import { useEffect, useState } from 'react';
-import { db } from '../../../lib/firebase';
+import { db } from '../../firebase/config';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
 
 export default function ParentMessagesPage() {

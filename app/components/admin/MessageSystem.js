@@ -3,7 +3,7 @@
 //Ji, this is your admin messaging system. i didnt use component for admin system because i made  chat window and messaging list and made it both admin and parent dashboard call it. if you made any changes to other files, please add a comment that you did make changes so we dont get conflict when merging.
 
 import { useEffect, useState } from 'react';
-import { db } from '../../../lib/firebase';
+import { db } from '../../firebase/config';
 import {
   collection,
   query,
