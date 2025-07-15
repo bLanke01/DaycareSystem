@@ -440,6 +440,99 @@ const ParentActivityView = () => {
                           <p>{activity.notes}</p>
                         </div>
                       )}
+
+                      {activity.photos && activity.photos.length > 0 && (
+                        <div className="activity-photos" style={{ marginTop: '1rem' }}>
+                          <h4 style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>📸 Activity Photos:</h4>
+                          <div 
+                            className="photos-grid" 
+                            style={{ 
+                              display: 'grid', 
+                              gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', 
+                              gap: '0.5rem' 
+                            }}
+                          >
+                            {activity.photos.map((photo, index) => {
+                              // Handle both old URL format and new base64 format
+                              const photoSrc = typeof photo === 'string' ? photo : photo.data;
+                              const photoName = typeof photo === 'string' ? `Activity Photo ${index + 1}` : photo.name;
+                              const photoSize = typeof photo === 'object' ? photo.size : null;
+                              
+                              return (
+                                <div 
+                                  key={index} 
+                                  className="photo-item"
+                                  style={{ 
+                                    position: 'relative', 
+                                    cursor: 'pointer',
+                                    borderRadius: '0.5rem',
+                                    overflow: 'hidden'
+                                  }}
+                                  onClick={() => {
+                                    const newWindow = window.open();
+                                    newWindow.document.write(`
+                                      <html>
+                                        <head><title>${photoName}</title></head>
+                                        <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#000;">
+                                          <img src="${photoSrc}" style="max-width:100%; max-height:100vh; object-fit:contain;" />
+                                        </body>
+                                      </html>
+                                    `);
+                                  }}
+                                >
+                                  <img
+                                    src={photoSrc}
+                                    alt={photoName}
+                                    className="activity-photo"
+                                    style={{
+                                      width: '100%',
+                                      height: '80px',
+                                      objectFit: 'cover',
+                                      borderRadius: '0.5rem',
+                                      transition: 'opacity 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.opacity = '0.8'}
+                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                                  />
+                                  <div 
+                                    className="photo-overlay"
+                                    style={{
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 0,
+                                      backgroundColor: 'rgba(0,0,0,0.7)',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      opacity: 0,
+                                      transition: 'opacity 0.2s',
+                                      borderRadius: '0.5rem',
+                                      padding: '0.25rem'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.opacity = '1'}
+                                    onMouseLeave={(e) => e.target.style.opacity = '0'}
+                                  >
+                                    <span style={{ color: 'white', fontSize: '0.75rem', textAlign: 'center', marginBottom: '0.25rem' }}>
+                                      🔍 Click to view
+                                    </span>
+                                    {typeof photo === 'object' && (
+                                      <div style={{ color: 'white', fontSize: '0.6rem', textAlign: 'center' }}>
+                                        <div style={{ fontWeight: 'bold', marginBottom: '0.1rem' }}>
+                                          {photo.name.length > 15 ? photo.name.substring(0, 15) + '...' : photo.name}
+                                        </div>
+                                        <div>{(photo.size / 1024 / 1024).toFixed(1)}MB</div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -533,6 +533,45 @@ export default function ParentDashboard() {
                         {activity.notes && (
                           <p className="text-sm opacity-70 mt-2">Notes: {activity.notes}</p>
                         )}
+                        {activity.photos && activity.photos.length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm font-semibold mb-2">📸 Photos:</p>
+                            <div className="flex gap-2 overflow-x-auto">
+                              {activity.photos.map((photo, index) => {
+                                // Handle both old URL format and new base64 format
+                                const photoSrc = typeof photo === 'string' ? photo : photo.data;
+                                const photoName = typeof photo === 'string' ? `Activity Photo ${index + 1}` : photo.name;
+                                
+                                return (
+                                  <div key={index} className="relative flex-shrink-0 group">
+                                    <img
+                                      src={photoSrc}
+                                      alt={photoName}
+                                      className="w-16 h-16 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                                      onClick={() => {
+                                        const newWindow = window.open();
+                                        newWindow.document.write(`
+                                          <html>
+                                            <head><title>${photoName}</title></head>
+                                            <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#000;">
+                                              <img src="${photoSrc}" style="max-width:100%; max-height:100vh; object-fit:contain;" />
+                                            </body>
+                                          </html>
+                                        `);
+                                      }}
+                                    />
+                                    {/* Show file info tooltip for new format */}
+                                    {typeof photo === 'object' && (
+                                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
+                                        {photo.name} ({(photo.size / 1024 / 1024).toFixed(1)}MB)
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}

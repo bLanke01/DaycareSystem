@@ -2,6 +2,327 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Enhanced Accessibility Styles */
+@layer base {
+  /* Focus indicators for better keyboard navigation */
+  *:focus {
+    outline: 2px solid hsl(var(--p));
+    outline-offset: 2px;
+  }
+
+  /* Enhanced focus for interactive elements */
+  button:focus,
+  a:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid hsl(var(--p));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+  }
+
+  /* Skip links */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .sr-only:focus,
+  .focus\:not-sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 1rem;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .navbar {
+      border-bottom: 2px solid;
+    }
+    
+    .btn {
+      border: 2px solid;
+    }
+    
+    .card {
+      border: 1px solid;
+    }
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Improved color contrast for text */
+  .text-base-content {
+    color: hsl(var(--bc) / 0.87);
+  }
+
+  .text-base-content\/70 {
+    color: hsl(var(--bc) / 0.7);
+  }
+
+  .text-base-content\/50 {
+    color: hsl(var(--bc) / 0.5);
+  }
+}
+
+@layer components {
+  /* Enhanced navigation styles */
+  .navbar {
+    @apply border-b border-base-300;
+  }
+
+  /* Better focus states for menu items */
+  .menu li a:focus,
+  .menu li button:focus {
+    @apply bg-base-300 outline-none ring-2 ring-primary ring-offset-2;
+  }
+
+  .menu li a.active {
+    @apply bg-primary text-primary-content font-semibold shadow-md;
+  }
+
+  /* Enhanced sidebar styles */
+  .drawer-side {
+    @apply z-40;
+  }
+
+  .drawer-overlay {
+    @apply bg-black/50 backdrop-blur-sm;
+  }
+
+  /* Better breadcrumb styling */
+  .breadcrumbs ol li a:hover {
+    @apply text-primary underline;
+  }
+
+  .breadcrumbs ol li[aria-current="page"] {
+    @apply font-semibold text-base-content;
+  }
+
+  /* Enhanced form controls */
+  .form-control label {
+    @apply font-medium text-base-content;
+  }
+
+  .input:focus,
+  .textarea:focus,
+  .select:focus {
+    @apply ring-2 ring-primary ring-offset-2 border-primary;
+  }
+
+  /* Better button states */
+  .btn:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Enhanced card styling */
+  .card {
+    @apply border border-base-300/50;
+  }
+
+  .card:focus-within {
+    @apply ring-1 ring-primary/20;
+  }
+
+  /* Optimized card body spacing */
+  .card-body {
+    @apply p-4 lg:p-6;
+  }
+
+  .card-body.compact {
+    @apply p-3;
+  }
+
+  /* Alert and notification improvements */
+  .alert {
+    @apply border border-base-300/20;
+  }
+
+  /* Loading states */
+  .loading {
+    @apply animate-spin;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loading {
+      @apply animate-none;
+    }
+  }
+
+  /* Better mobile touch targets and spacing */
+  @media (max-width: 768px) {
+    .btn {
+      @apply min-h-12 px-4;
+    }
+    
+    .menu li a,
+    .menu li button {
+      @apply min-h-12 px-3;
+    }
+
+    /* Reduce padding on mobile for better space usage */
+    .card-body {
+      @apply p-3;
+    }
+
+    /* Optimize grid gaps on mobile */
+    .grid {
+      @apply gap-3;
+    }
+
+    /* Reduce excessive margins on mobile */
+    .space-y-6 > * + * {
+      @apply mt-4;
+    }
+
+    .space-y-4 > * + * {
+      @apply mt-3;
+    }
+  }
+
+  /* Enhanced dropdown styles */
+  .dropdown-content {
+    @apply border border-base-300 shadow-xl;
+  }
+
+  /* Better modal accessibility */
+  .modal:target,
+  .modal.modal-open {
+    @apply pointer-events-auto visible opacity-100;
+  }
+
+  /* Utility classes for spacing control */
+  .spacing-tight {
+    @apply space-y-2;
+  }
+
+  .spacing-normal {
+    @apply space-y-4;
+  }
+
+  .spacing-loose {
+    @apply space-y-6;
+  }
+
+  /* Optimized form spacing */
+  .form-control + .form-control {
+    @apply mt-3;
+  }
+
+  /* Better list spacing */
+  .menu li + li {
+    @apply mt-1;
+  }
+
+  .modal-box:focus {
+    @apply outline-none ring-2 ring-primary ring-offset-2;
+  }
+
+  /* Improved table accessibility */
+  .table th {
+    @apply font-semibold text-base-content;
+  }
+
+  .table tr:focus-within {
+    @apply bg-base-200;
+  }
+
+  /* Better progress indicators */
+  .progress:focus {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+
+  /* Enhanced tooltip styling */
+  .tooltip:before {
+    @apply text-sm font-medium;
+  }
+
+  /* Better error states */
+  .input-error,
+  .textarea-error,
+  .select-error {
+    @apply border-error ring-error;
+  }
+
+  /* Success states */
+  .input-success,
+  .textarea-success,
+  .select-success {
+    @apply border-success ring-success;
+  }
+}
+
+@layer utilities {
+  /* Accessibility utilities */
+  .focus-visible\:ring-primary:focus-visible {
+    @apply ring-2 ring-primary ring-offset-2;
+  }
+
+  .focus-visible\:ring-secondary:focus-visible {
+    @apply ring-2 ring-secondary ring-offset-2;
+  }
+
+  /* Text size utilities for better readability */
+  .text-readable {
+    @apply text-base leading-relaxed;
+  }
+
+  .text-readable-lg {
+    @apply text-lg leading-relaxed;
+  }
+
+  /* High contrast utilities */
+  .high-contrast {
+    @apply contrast-125 saturate-150;
+  }
+
+  /* Motion utilities */
+  .motion-safe\:animate-fade-in {
+    @apply animate-pulse;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .motion-safe\:animate-fade-in {
+      @apply animate-none;
+    }
+  }
+
+  /* Touch target utilities */
+  .touch-target {
+    @apply min-h-12 min-w-12;
+  }
+
+  .touch-target-lg {
+    @apply min-h-16 min-w-16;
+  }
+}
+
 /* Invoice Status Badges */
 .badge[data-status="pending"] {
   background-color: #f59e0b;
