@@ -110,16 +110,16 @@ export default function FAQ() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <div className="min-h-screen bg-base-100">
       {/* Hero Section */}
-      <div className="hero min-h-[50vh] bg-gradient-to-r from-primary/10 to-secondary/10">
+      <div className="hero min-h-[50vh] bg-gradient-to-r from-primary/20 to-secondary/15">
         <div className="hero-content text-center">
           <div className="max-w-4xl">
             <h1 className="text-6xl font-bold text-primary mb-6">
               Questions & Answers 
               <span className="text-4xl ml-2">❓💡</span>
             </h1>
-            <p className="text-2xl text-gray-700 leading-relaxed">
+            <p className="text-2xl text-base-content leading-relaxed">
               Get instant answers to the most common questions about TinyLog daycare. 
               Still have questions? We're here to help!
             </p>
@@ -128,7 +128,7 @@ export default function FAQ() {
       </div>
 
       {/* Search and Filter Section */}
-      <div className="py-12 bg-white">
+      <div className="py-12 bg-gradient-to-br from-base-200 to-neutral/20">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             
@@ -186,8 +186,8 @@ export default function FAQ() {
             {filteredFAQs.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-6xl mb-4">🔍</div>
-                <h3 className="text-2xl font-bold text-gray-600 mb-4">No questions found</h3>
-                <p className="text-lg text-gray-500 mb-6">
+                            <h3 className="text-2xl font-bold text-base-content mb-4">No questions found</h3>
+            <p className="text-lg text-base-content/90 mb-6">
                   Try adjusting your search or selecting a different category.
                 </p>
                 <button 
@@ -200,7 +200,7 @@ export default function FAQ() {
             ) : (
               <div className="space-y-4">
                 {filteredFAQs.map((item) => (
-                  <div key={item.id} className="card bg-white shadow-lg hover:shadow-xl transition-all duration-300">
+                  <div key={item.id} className="card bg-base-100 shadow-lg hover:shadow-xl transition-all duration-300">
                     <div className="card-body p-0">
                       
                       {/* Question */}
@@ -218,7 +218,7 @@ export default function FAQ() {
                           <div className={`transform transition-transform duration-200 ${
                             openItems[item.id] ? 'rotate-180' : ''
                           }`}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                             </svg>
                           </div>
@@ -231,7 +231,7 @@ export default function FAQ() {
                       }`}>
                         <div className="px-6 pb-6">
                           <div className="border-l-4 border-primary pl-4 bg-base-50 p-4 rounded-r-lg">
-                            <p className="text-gray-700 leading-relaxed">
+                            <p className="text-base-content leading-relaxed">
                               {item.answer}
                             </p>
                           </div>
@@ -247,47 +247,47 @@ export default function FAQ() {
       </div>
 
       {/* Quick Actions */}
-      <div className="py-16 bg-white">
+      <div className="py-16 bg-gradient-to-br from-base-300 to-primary/10">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-primary mb-4">
                 Still Have Questions? <span className="text-3xl">🤔</span>
               </h2>
-              <p className="text-xl text-gray-600">
+              <p className="text-xl text-base-content">
                 Our team is always happy to help! Get in touch with us directly.
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Link href="/contact">
-                <div className="card bg-gradient-to-br from-blue-50 to-blue-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
+                <div className="card bg-gradient-to-br from-secondary/15 to-accent/10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
                   <div className="card-body text-center">
                     <div className="text-5xl mb-4">📞</div>
                     <h3 className="card-title justify-center text-primary">Call Us</h3>
-                    <p className="text-gray-700">Speak directly with our team</p>
+                    <p className="text-base-content">Speak directly with our team</p>
                     <p className="font-semibold text-primary">(403) 555-1234</p>
                   </div>
                 </div>
               </Link>
 
               <Link href="/contact">
-                <div className="card bg-gradient-to-br from-green-50 to-green-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
+                <div className="card bg-gradient-to-br from-base-300 to-neutral/15 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
                   <div className="card-body text-center">
                     <div className="text-5xl mb-4">📧</div>
                     <h3 className="card-title justify-center text-primary">Email Us</h3>
-                    <p className="text-gray-700">Send us your questions</p>
+                    <p className="text-base-content">Send us your questions</p>
                     <p className="font-semibold text-primary">info@daycare.com</p>
                   </div>
                 </div>
               </Link>
 
               <Link href="/contact">
-                <div className="card bg-gradient-to-br from-purple-50 to-purple-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
+                <div className="card bg-gradient-to-br from-primary/12 to-secondary/8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
                   <div className="card-body text-center">
                     <div className="text-5xl mb-4">🏠</div>
                     <h3 className="card-title justify-center text-primary">Visit Us</h3>
-                    <p className="text-gray-700">Schedule a tour today</p>
+                    <p className="text-base-content">Schedule a tour today</p>
                     <p className="font-semibold text-primary">Book Tour</p>
                   </div>
                 </div>

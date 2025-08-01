@@ -4,9 +4,9 @@ import Image from 'next/image';
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-base-100">
       {/* Hero Section */}
-      <div className="hero min-h-[80vh] bg-gradient-to-br from-yellow-50 to-blue-50">
+      <div className="hero min-h-[80vh] bg-gradient-to-br from-primary/20 to-secondary/15">
         <div className="hero-content flex-col lg:flex-row-reverse gap-8 max-w-7xl">
           <div className="lg:w-1/2">
             {/* Image Carousel */}
@@ -94,7 +94,7 @@ export default function Home() {
               Where Little Dreams Come to Life! 
               <span className="text-4xl">🌈</span>
             </h1>
-            <p className="py-6 text-xl text-gray-700 leading-relaxed">
+                          <p className="py-6 text-xl text-base-content leading-relaxed">
               Give your child the perfect start with our nurturing daycare! TinyLog provides a safe, 
               fun, and educational environment where children ages 6 months to 12 years can 
               grow, learn, and make lasting friendships. 
@@ -147,13 +147,13 @@ export default function Home() {
       </div>
 
       {/* Why Choose Us Section */}
-      <div className="py-20 bg-white">
+      <div className="py-20 bg-gradient-to-br from-base-200 to-base-300">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
               Why Families Love TinyLog! <span className="text-4xl">💕</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-base-content max-w-3xl mx-auto">
               We're more than just a daycare - we're a second home where your child's 
               happiness and development come first at TinyLog!
             </p>
@@ -161,38 +161,38 @@ export default function Home() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Feature Card 1 */}
-            <div className="card bg-gradient-to-br from-blue-50 to-blue-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <div className="card bg-gradient-to-br from-secondary/15 to-accent/10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
                 <div className="text-6xl mb-4">🎨</div>
                 <h3 className="card-title text-primary justify-center text-xl">Creative Learning</h3>
-                <p className="text-gray-700">Art, music, and hands-on activities that spark imagination and creativity in every child.</p>
+                <p className="text-base-content">Art, music, and hands-on activities that spark imagination and creativity in every child.</p>
               </div>
             </div>
             
             {/* Feature Card 2 */}
-            <div className="card bg-gradient-to-br from-green-50 to-green-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <div className="card bg-gradient-to-br from-primary/10 to-neutral/15 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
                 <div className="text-6xl mb-4">🛡️</div>
                 <h3 className="card-title text-primary justify-center text-xl">Safe & Secure</h3>
-                <p className="text-gray-700">State-of-the-art security, trained staff, and child-proofed facilities for complete peace of mind.</p>
+                <p className="text-base-content">State-of-the-art security, trained staff, and child-proofed facilities for complete peace of mind.</p>
               </div>
             </div>
             
             {/* Feature Card 3 */}
-            <div className="card bg-gradient-to-br from-yellow-50 to-yellow-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <div className="card bg-gradient-to-br from-accent/12 to-primary/8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
                 <div className="text-6xl mb-4">🍎</div>
                 <h3 className="card-title text-primary justify-center text-xl">Healthy Nutrition</h3>
-                <p className="text-gray-700">Fresh, nutritious meals and snacks prepared daily to fuel growing minds and bodies.</p>
+                <p className="text-base-content">Fresh, nutritious meals and snacks prepared daily to fuel growing minds and bodies.</p>
               </div>
             </div>
 
             {/* Feature Card 4 */}
-            <div className="card bg-gradient-to-br from-purple-50 to-purple-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+            <div className="card bg-gradient-to-br from-neutral/12 to-secondary/10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
                 <div className="text-6xl mb-4">👥</div>
                 <h3 className="card-title text-primary justify-center text-xl">Professional Staff</h3>
-                <p className="text-gray-700">Certified early childhood educators who truly care about your child's growth and happiness.</p>
+                <p className="text-base-content">Certified early childhood educators who truly care about your child's growth and happiness.</p>
               </div>
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function Home() {
               </button>
             </Link>
             <Link href="/contact">
-              <button className="btn btn-outline btn-lg text-lg px-8 text-white border-white hover:bg-white hover:text-primary">
+              <button className="btn btn-outline btn-lg text-lg px-8 text-primary-content border-primary-content hover:bg-primary-content hover:text-primary">
                 <span className="text-2xl mr-2">📞</span>
                 Call Us Today
               </button>

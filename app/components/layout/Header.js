@@ -27,7 +27,7 @@ const Header = () => {
   ];
 
   return (
-    <div className={`navbar bg-white/95 backdrop-blur-md shadow-lg sticky top-0 z-50 transition-all duration-300 ${
+    <div className={`navbar bg-base-100/90 backdrop-blur-md shadow-lg sticky top-0 z-50 transition-all duration-300 ${
       isScrolled ? 'py-2' : 'py-4'
     }`}>
       <div className="navbar-start">
@@ -42,7 +42,7 @@ const Header = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" />
             </svg>
           </label>
-          <ul tabIndex={0} className={`menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-2xl bg-white rounded-2xl w-64 border border-primary/10 ${isMenuOpen ? 'block' : 'hidden'}`}>
+          <ul tabIndex={0} className={`menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-2xl bg-base-100 rounded-2xl w-64 border border-primary/10 ${isMenuOpen ? 'block' : 'hidden'}`}>
             {navItems.map((item) => (
               <li key={item.href}>
                 <Link 
@@ -59,7 +59,7 @@ const Header = () => {
             <li>
               <Link 
                 href="/auth/login" 
-                className="flex items-center space-x-3 hover:bg-gray-50 rounded-xl p-3"
+                className="flex items-center space-x-3 hover:bg-base-200 rounded-xl p-3"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-2xl">👤</span>
@@ -91,7 +91,7 @@ const Header = () => {
                   className="object-contain"
                 />
               </div>
-              <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs animate-pulse">
+                              <div className="absolute -top-1 -right-1 w-5 h-5 bg-warning rounded-full flex items-center justify-center text-xs animate-pulse">
                 ✨
               </div>
             </div>
@@ -99,7 +99,7 @@ const Header = () => {
               <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 TinyLog
               </h1>
-              <p className="text-xs text-gray-500 -mt-1">Daycare & Learning Center</p>
+              <p className="text-xs text-base-content -mt-1">Daycare & Learning Center</p>
             </div>
           </div>
         </Link>

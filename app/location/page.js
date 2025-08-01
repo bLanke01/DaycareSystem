@@ -44,16 +44,16 @@ export default function Location() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+    <div className="min-h-screen bg-base-100">
       {/* Hero Section */}
-      <div className="hero min-h-[60vh] bg-gradient-to-r from-primary/10 to-secondary/10">
+      <div className="hero min-h-[60vh] bg-gradient-to-r from-primary/20 to-secondary/15">
         <div className="hero-content text-center">
           <div className="max-w-4xl">
             <h1 className="text-6xl font-bold text-primary mb-6">
               Visit TinyLog's Location 
               <span className="text-4xl ml-2">📍🏠</span>
             </h1>
-            <p className="text-2xl text-gray-700 leading-relaxed">
+            <p className="text-2xl text-base-content leading-relaxed">
               Conveniently located in the heart of Calgary's southwest community with easy access by car, transit, 
               and walking. Come see our beautiful TinyLog facility in person!
             </p>
@@ -78,14 +78,14 @@ export default function Location() {
               </h2>
               
               {/* Address Card */}
-              <div className="card bg-gradient-to-br from-blue-50 to-purple-50 shadow-xl mb-8">
+              <div className="card bg-gradient-to-br from-secondary/15 to-accent/10 shadow-xl mb-8">
                 <div className="card-body">
                   <div className="flex items-start space-x-4">
                     <span className="text-4xl">🏠</span>
                     <div>
                       <h3 className="text-2xl font-bold text-primary mb-2">Visit TinyLog</h3>
-                      <p className="text-xl text-gray-700 mb-2">21 Everdige Court SW</p>
-                      <p className="text-xl text-gray-700 mb-4">Calgary, Alberta</p>
+                                    <p className="text-xl text-base-content mb-2">21 Everdige Court SW</p>
+              <p className="text-xl text-base-content mb-4">Calgary, Alberta</p>
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <a href="tel:+14035425531" className="btn btn-outline btn-sm">
@@ -103,15 +103,15 @@ export default function Location() {
               </div>
 
               {/* Owner Info Card */}
-              <div className="card bg-gradient-to-br from-purple-50 to-pink-50 shadow-xl mb-8">
+              <div className="card bg-gradient-to-br from-primary/12 to-secondary/8 shadow-xl mb-8">
                 <div className="card-body">
                   <div className="flex items-start space-x-4">
                     <span className="text-4xl">👩‍💼</span>
                     <div>
                       <h3 className="text-2xl font-bold text-primary mb-2">Meet Our Owner</h3>
-                      <p className="text-xl text-gray-700 mb-1">Francesca Kella</p>
+                      <p className="text-xl text-base-content mb-1">Francesca Kella</p>
                       <p className="text-lg text-secondary mb-4">Daycare Owner & Director</p>
-                      <p className="text-gray-600">
+                      <p className="text-base-content">
                         Dedicated to providing exceptional childcare with years of experience 
                         in early childhood education and child development.
                       </p>
@@ -121,7 +121,7 @@ export default function Location() {
               </div>
 
               {/* Hours Card */}
-              <div className="card bg-gradient-to-br from-yellow-50 to-orange-50 shadow-xl">
+              <div className="card bg-gradient-to-br from-base-300 to-accent/8 shadow-xl">
                 <div className="card-body">
                   <div className="flex items-start space-x-4">
                     <span className="text-4xl">🕐</span>
@@ -144,7 +144,7 @@ export default function Location() {
                       </div>
                       
                       <div className="mt-4 p-3 bg-info/10 rounded-lg">
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-base-content/90">
                           <span className="font-semibold">Extended Hours:</span> Available upon request for families with special needs
                         </p>
                       </div>
@@ -156,7 +156,7 @@ export default function Location() {
 
             {/* Interactive Map Placeholder */}
             <div>
-              <div className="card bg-white shadow-2xl">
+              <div className="card bg-base-100 shadow-2xl">
                 <div className="card-body p-0">
                   <div className="relative h-[500px] bg-gradient-to-br from-green-100 to-blue-100 rounded-t-2xl overflow-hidden">
                     
@@ -180,7 +180,7 @@ export default function Location() {
                     {/* Map Overlay with Location Pin */}
                     <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
                       <div className="animate-bounce">
-                        <div className="bg-red-500 text-white rounded-full p-3 shadow-lg">
+                        <div className="bg-error text-error-content rounded-full p-3 shadow-lg">
                           <span className="text-2xl">📍</span>
                         </div>
                       </div>
@@ -214,27 +214,27 @@ export default function Location() {
       </div>
 
       {/* Transportation Options */}
-      <div className="py-16 bg-gradient-to-br from-purple-50 to-pink-50">
+      <div className="py-16 bg-gradient-to-br from-primary/10 to-secondary/8">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-primary mb-4">
               Getting to TinyLog is Easy! <span className="text-3xl">🚗✨</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-base-content max-w-3xl mx-auto">
               Multiple convenient transportation options make drop-off and pick-up simple for busy families.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {transportOptions.map((option, index) => (
-              <div key={index} className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+              <div key={index} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                 <div className="card-body">
                   <div className="flex items-start space-x-4">
                     <div className="text-5xl">{option.icon}</div>
                     <div className="flex-1">
                       <h3 className="text-2xl font-bold text-primary mb-2">{option.title}</h3>
-                      <p className="text-gray-700 mb-3">{option.description}</p>
-                      <p className="text-sm text-gray-600 mb-3">{option.details}</p>
+                                      <p className="text-base-content mb-3">{option.description}</p>
+                <p className="text-sm text-base-content/90 mb-3">{option.details}</p>
                       <div className="badge badge-secondary badge-lg">
                         {option.time}
                       </div>
@@ -247,21 +247,21 @@ export default function Location() {
         </div>
       </div>
 
-      {/* Nearby Places */}
-      <div className="py-16 bg-white">
+              {/* Nearby Places */}
+        <div className="py-16 bg-gradient-to-br from-base-200 to-neutral/20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-primary mb-4">
               Great Southwest Neighborhood! <span className="text-3xl">🏘️❤️</span>
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-base-content">
               We're surrounded by family-friendly amenities and community resources in Calgary's southwest.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {nearbyPlaces.map((place, index) => (
-              <div key={index} className="card bg-gradient-to-br from-green-50 to-blue-50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <div key={index} className="card bg-gradient-to-br from-base-300 to-accent/10 shadow-lg hover:shadow-xl transition-all duration-300">
                 <div className="card-body text-center">
                   <div className="text-4xl mb-3">{place.icon}</div>
                   <h3 className="font-bold text-lg text-primary">{place.name}</h3>
@@ -276,7 +276,7 @@ export default function Location() {
       </div>
 
       {/* Facility Features */}
-      <div className="py-16 bg-gradient-to-br from-yellow-50 to-red-50">
+      <div className="py-16 bg-gradient-to-br from-primary/8 to-secondary/5">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-primary mb-4">
@@ -285,35 +285,35 @@ export default function Location() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="card bg-white shadow-xl">
+            <div className="card bg-base-100 shadow-xl">
               <div className="card-body text-center">
                 <div className="text-5xl mb-4">🚗</div>
                 <h3 className="text-lg font-bold text-primary">Free Parking</h3>
-                <p className="text-gray-600">Covered parking spots for easy drop-off</p>
+                <p className="text-base-content">Covered parking spots for easy drop-off</p>
               </div>
             </div>
 
-            <div className="card bg-white shadow-xl">
+            <div className="card bg-base-100 shadow-xl">
               <div className="card-body text-center">
                 <div className="text-5xl mb-4">🔒</div>
                 <h3 className="text-lg font-bold text-primary">Secure Entry</h3>
-                <p className="text-gray-600">Keycard access and security cameras</p>
+                <p className="text-base-content">Keycard access and security cameras</p>
               </div>
             </div>
 
-            <div className="card bg-white shadow-xl">
+            <div className="card bg-base-100 shadow-xl">
               <div className="card-body text-center">
                 <div className="text-5xl mb-4">🌳</div>
                 <h3 className="text-lg font-bold text-primary">Outdoor Play</h3>
-                <p className="text-gray-600">Large fenced playground area</p>
+                <p className="text-base-content">Large fenced playground area</p>
               </div>
             </div>
 
-            <div className="card bg-white shadow-xl">
+            <div className="card bg-base-100 shadow-xl">
               <div className="card-body text-center">
                 <div className="text-5xl mb-4">♿</div>
                 <h3 className="text-lg font-bold text-primary">Accessible</h3>
-                <p className="text-gray-600">Wheelchair accessible entrance</p>
+                <p className="text-base-content">Wheelchair accessible entrance</p>
               </div>
             </div>
           </div>

@@ -127,16 +127,16 @@ export default function Program() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-blue-50">
+    <div className="min-h-screen bg-base-100">
       {/* Hero Section */}
-      <div className="hero min-h-[70vh] bg-gradient-to-r from-primary/10 to-secondary/10">
+      <div className="hero min-h-[70vh] bg-gradient-to-r from-primary/20 to-secondary/15">
         <div className="hero-content text-center">
           <div className="max-w-4xl">
             <h1 className="text-6xl font-bold text-primary mb-6">
               TinyLog's Amazing Programs 
               <span className="text-4xl ml-2">🌟📚</span>
             </h1>
-            <p className="text-2xl text-gray-700 leading-relaxed mb-8">
+            <p className="text-2xl text-base-content leading-relaxed mb-8">
               Thoughtfully designed programs for every stage of your child's development. 
               From tiny infants to school-age children, TinyLog nurtures growth through play, learning, and love.
             </p>
@@ -159,13 +159,13 @@ export default function Program() {
       </div>
 
       {/* Our Beliefs Section */}
-      <div className="py-20 bg-white">
+      <div className="py-20 bg-gradient-to-br from-base-200 to-primary/10">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
               What TinyLog Believes <span className="text-4xl">💫</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-base-content max-w-3xl mx-auto">
               Our philosophy is built on the foundation that every child is unique, capable, and deserves 
               an environment where they can thrive and reach their full potential at TinyLog.
             </p>
@@ -193,7 +193,7 @@ export default function Program() {
                     Philosophy {index + 1}
                   </div>
                   <h3 className="text-4xl font-bold text-primary mb-6">{belief.title}</h3>
-                  <p className="text-lg text-gray-700 leading-relaxed">{belief.description}</p>
+                  <p className="text-lg text-base-content leading-relaxed">{belief.description}</p>
                 </div>
               </div>
             ))}
@@ -202,13 +202,13 @@ export default function Program() {
       </div>
 
       {/* Programs Section */}
-      <div className="py-20 bg-gradient-to-br from-purple-50 to-pink-50">
+      <div className="py-20 bg-gradient-to-br from-primary/8 to-secondary/6">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
               Age-Specific Programs <span className="text-4xl">👶🧒👦👧</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-base-content max-w-3xl mx-auto">
               Each TinyLog program is carefully crafted to meet the developmental needs and interests 
               of children at different stages of their growth journey.
             </p>
@@ -242,13 +242,13 @@ export default function Program() {
                     </div>
                   </div>
                   
-                  <p className="text-gray-700 mb-6">{program.description}</p>
+                  <p className="text-base-content mb-6">{program.description}</p>
                   
                   <div className="grid grid-cols-2 gap-2">
                     {program.features.map((feature, idx) => (
                       <div key={idx} className="flex items-center space-x-2">
                         <span className="text-green-500">✓</span>
-                        <span className="text-sm text-gray-600">{feature}</span>
+                        <span className="text-sm text-base-content/90">{feature}</span>
                       </div>
                     ))}
                   </div>
@@ -269,13 +269,13 @@ export default function Program() {
       </div>
 
       {/* Daily Schedule */}
-      <div className="py-20 bg-white">
+      <div className="py-20 bg-gradient-to-br from-base-200 to-neutral/20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
               A Day at TinyLog <span className="text-4xl">⏰🌈</span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-base-content max-w-3xl mx-auto">
               Our structured yet flexible daily routine provides predictability while allowing 
               for spontaneous learning moments and individual needs.
             </p>
@@ -290,7 +290,7 @@ export default function Program() {
                       <div className="text-3xl">{item.emoji}</div>
                       <div>
                         <p className="font-bold text-primary">{item.time}</p>
-                        <p className="text-gray-700">{item.activity}</p>
+                        <p className="text-base-content">{item.activity}</p>
                       </div>
                     </div>
                   </div>
@@ -302,7 +302,7 @@ export default function Program() {
       </div>
 
       {/* Enrichment Activities */}
-      <div className="py-20 bg-gradient-to-br from-green-50 to-blue-50">
+      <div className="py-20 bg-gradient-to-br from-base-300 to-accent/10">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
@@ -324,11 +324,11 @@ export default function Program() {
               { name: 'Puzzle Time', emoji: '🧩', description: 'Age-appropriate puzzles and matching games' },
               { name: 'Circle Time', emoji: '⭕', description: 'Group discussions and learning activities together' }
             ].map((activity, index) => (
-              <div key={index} className="card bg-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+              <div key={index} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                 <div className="card-body text-center p-6">
                   <div className="text-5xl mb-3">{activity.emoji}</div>
                   <h3 className="text-lg font-bold text-primary mb-2">{activity.name}</h3>
-                  <p className="text-gray-600 text-sm">{activity.description}</p>
+                  <p className="text-base-content/90 text-sm">{activity.description}</p>
                 </div>
               </div>
             ))}

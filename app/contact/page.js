@@ -76,16 +76,16 @@ export default function Contact() {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-blue-50">
+    <div className="min-h-screen bg-base-100">
       {/* Hero Section */}
-      <div className="hero min-h-[50vh] bg-gradient-to-r from-primary/10 to-secondary/10">
+      <div className="hero min-h-[50vh] bg-gradient-to-r from-primary/20 to-secondary/15">
         <div className="hero-content text-center">
           <div className="max-w-4xl">
             <h1 className="text-6xl font-bold text-primary mb-6">
               Let's Connect! 
               <span className="text-4xl ml-2">📞💕</span>
             </h1>
-            <p className="text-2xl text-gray-700 leading-relaxed">
+            <p className="text-2xl text-base-content leading-relaxed">
               Book a tour with your kids and see why families love TinyLog daycare! 
               We're excited to show you around our center and answer all your questions.
             </p>
@@ -110,7 +110,7 @@ export default function Contact() {
                   <div className="text-center py-12">
                     <div className="text-6xl mb-4">🎉</div>
                     <h3 className="text-2xl font-bold text-success mb-4">Thank You!</h3>
-                    <p className="text-lg text-gray-600 mb-6">
+                    <p className="text-lg text-base-content mb-6">
                       We've received your message and will get back to you within 24 hours!
                     </p>
                     <button 
@@ -251,7 +251,7 @@ export default function Contact() {
                   {/* Calendar Weekdays */}
                   <div className="grid grid-cols-7 gap-2 mb-4">
                     {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                      <div key={day} className="text-center font-bold text-gray-500 p-2">
+                      <div key={day} className="text-center font-bold text-base-content/70 p-2">
                         {day}
                       </div>
                     ))}
@@ -276,7 +276,7 @@ export default function Contact() {
                   </div>
                   
                   <div className="mt-6 p-4 bg-info/10 rounded-lg">
-                    <p className="text-sm text-center text-gray-600">
+                    <p className="text-sm text-center text-base-content/90">
                       <span className="font-semibold">Tour Hours:</span> Monday-Friday 9:00 AM - 4:00 PM
                       <br />
                       <span className="font-semibold">Duration:</span> 30-45 minutes
@@ -286,7 +286,7 @@ export default function Contact() {
               </div>
 
               {/* Contact Information */}
-              <div className="card bg-gradient-to-br from-green-50 to-blue-50 shadow-xl">
+              <div className="card bg-gradient-to-br from-base-200 to-accent/10 shadow-xl">
                 <div className="card-body p-8">
                   <div className="flex items-center mb-6">
                     <span className="text-3xl mr-3">📍</span>
@@ -298,7 +298,7 @@ export default function Contact() {
                       <span className="text-2xl">🏠</span>
                       <div>
                         <p className="font-semibold text-lg">Address</p>
-                        <p className="text-gray-600">21 Everdige Court SW<br />Calgary, Alberta</p>
+                        <p className="text-base-content">21 Everdige Court SW<br />Calgary, Alberta</p>
                       </div>
                     </div>
                     
@@ -306,7 +306,7 @@ export default function Contact() {
                       <span className="text-2xl">👩‍💼</span>
                       <div>
                         <p className="font-semibold text-lg">Owner & Director</p>
-                        <p className="text-gray-600">Francesca Kella</p>
+                        <p className="text-base-content">Francesca Kella</p>
                       </div>
                     </div>
                     
@@ -334,7 +334,7 @@ export default function Contact() {
                       <span className="text-2xl">🕐</span>
                       <div>
                         <p className="font-semibold text-lg">Hours</p>
-                        <p className="text-gray-600 text-sm">
+                        <p className="text-base-content/90 text-sm">
                           Monday - Friday: 7:00 AM - 6:00 PM<br />
                           Saturday - Sunday: Closed
                         </p>
@@ -354,7 +354,7 @@ export default function Contact() {
               </div>
 
               {/* Quick Actions */}
-              <div className="card bg-gradient-to-br from-purple-50 to-pink-50 shadow-xl">
+              <div className="card bg-gradient-to-br from-base-300 to-primary/10 shadow-xl">
                 <div className="card-body p-8">
                   <h3 className="text-xl font-bold text-primary mb-4 text-center">
                     <span className="text-2xl mr-2">⚡</span>

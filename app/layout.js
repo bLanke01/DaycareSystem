@@ -11,7 +11,7 @@ import { Toaster } from "react-hot-toast";
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-theme="light">
+    <html lang="en" data-theme="val">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="description" content="Professional daycare management system for families and administrators" />

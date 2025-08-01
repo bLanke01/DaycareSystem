@@ -953,21 +953,21 @@ const ActivityLog = () => {
 
                         <div className="space-y-3 mb-4">
                           <div className="flex flex-col gap-1">
-                            <span className="text-xs font-medium text-gray-600">Development:</span>
+                            <span className="text-xs font-medium text-base-content/90">Development:</span>
                             <span className="badge badge-outline badge-sm">
                               {developmentLevels.find(l => l.value === activity.developmentLevel)?.label.split(' - ')[0]}
                             </span>
                           </div>
                           
                           <div className="flex flex-col gap-1">
-                            <span className="text-xs font-medium text-gray-600">Participation:</span>
+                            <span className="text-xs font-medium text-base-content/90">Participation:</span>
                             <span className="badge badge-outline badge-sm">
                               {participationLevels.find(l => l.value === activity.participationLevel)?.label}
                             </span>
                           </div>
                           
                           <div className="flex flex-col gap-1">
-                            <span className="text-xs font-medium text-gray-600">Enjoyment:</span>
+                            <span className="text-xs font-medium text-base-content/90">Enjoyment:</span>
                             <span className="badge badge-outline badge-sm">
                               {enjoymentLevels.find(l => l.value === activity.enjoymentLevel)?.label}
                             </span>
@@ -1382,7 +1382,7 @@ const ActivityLog = () => {
                     <div className="text-sm text-blue-600 font-medium">
                       🔄 Converting images to database format...
                     </div>
-                    <div className="text-xs text-gray-600">
+                    <div className="text-xs text-base-content/90">
                       Processing {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} for Firestore database storage
                     </div>
                   </div>
@@ -1392,7 +1392,7 @@ const ActivityLog = () => {
                 {!error && !loading && !uploadingImages && selectedImages.length > 0 && (
                   <div className="text-sm text-green-600 mt-2">
                     ✅ {selectedImages.length} image{selectedImages.length !== 1 ? 's' : ''} ready to save
-                    <div className="text-xs text-gray-600 mt-1">
+                    <div className="text-xs text-base-content/90 mt-1">
                       Using database storage (500KB limit per image to stay under Firestore 1MB document limit)
                     </div>
                   </div>
@@ -1785,7 +1785,7 @@ const ActivityLog = () => {
                      <div className="text-sm text-blue-600 font-medium">
                        🔄 Converting new images to database format...
                      </div>
-                     <div className="text-xs text-gray-600">
+                     <div className="text-xs text-base-content/90">
                        Processing {editImages.length} new image{editImages.length !== 1 ? 's' : ''} for Firestore database storage
                      </div>
                    </div>
@@ -1795,7 +1795,7 @@ const ActivityLog = () => {
                  {!error && !loading && !uploadingImages && editImages.length > 0 && (
                    <div className="text-sm text-green-600 mt-2">
                      ✅ {editImages.length} new image{editImages.length !== 1 ? 's' : ''} ready to upload
-                     <div className="text-xs text-gray-600 mt-1">
+                     <div className="text-xs text-base-content/90 mt-1">
                        Will be added to existing {existingPhotos.length} photo{existingPhotos.length !== 1 ? 's' : ''}
                      </div>
                    </div>
