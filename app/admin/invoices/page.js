@@ -10,13 +10,24 @@ import {
   updateDoc,
   addDoc,
   deleteDoc,
-} from "firebase/firestore"; 
+  getDoc,
+} from "firebase/firestore";
 import { db } from "../../firebase/config";
 
 // 1. Update the StatusBadge color logic:
-function StatusBadge({ status }) {
+function StatusBadge({ status, isOverdue = false }) {
+  // If invoice is overdue and unpaid, show "overdue" instead of "unpaid"
+  const displayStatus = isOverdue && status === "unpaid" ? "overdue" : status;
+
   const color =
-    status === "paid" ? "#4caf50" : status === "unpaid" ? "#ff9800" : "#bdbdbd";
+    displayStatus === "paid"
+      ? "#4caf50"
+      : displayStatus === "unpaid"
+      ? "#ff9800"
+      : displayStatus === "overdue"
+      ? "#f44336"
+      : "#bdbdbd"; // Red for overdue
+
   return (
     <span
       style={{
@@ -31,7 +42,7 @@ function StatusBadge({ status }) {
         textAlign: "center",
       }}
     >
-      {status}
+      {displayStatus}
     </span>
   );
 }
@@ -62,6 +73,13 @@ export default function AdminPaymentsPage() {
   const [search, setSearch] = useState("");
   const [editingStatusId, setEditingStatusId] = useState(null);
 
+  // Add the isOverdue function
+  const isOverdue = (payment) => {
+    if (payment.status === "paid") return false;
+    const today = new Date().toISOString().split("T")[0];
+    return payment.dueDate < today;
+  };
+
   // NEW: State for editing invoice items
   const [editItems, setEditItems] = useState([]);
   // NEW: Track which invoice is being edited
@@ -87,6 +105,15 @@ export default function AdminPaymentsPage() {
   // Add state for invoice delete confirmation
   const [showDeleteInvoiceConfirm, setShowDeleteInvoiceConfirm] =
     useState(false);
+
+  // For warning message
+  const [uidWarning, setUidWarning] = useState("");
+
+  // Add state
+  const [uidLoading, setUidLoading] = useState(false);
+
+  // Add validation state
+  const [validationErrors, setValidationErrors] = useState([]);
 
   useEffect(() => {
     async function fetchPayments() {
@@ -208,8 +235,13 @@ export default function AdminPaymentsPage() {
     0
   );
 
+  // Update the filtering logic to include overdue
   const filteredPayments = payments
-    .filter((p) => (statusFilter === "All" ? true : p.status === statusFilter))
+    .filter((payment) => {
+      if (statusFilter === "All") return true;
+      if (statusFilter === "overdue") return isOverdue(payment);
+      return payment.status === statusFilter;
+    })
     .filter((p) => {
       const q = search.trim().toLowerCase();
       if (!q) return true;
@@ -245,6 +277,15 @@ export default function AdminPaymentsPage() {
   // NEW: Handle creating a new invoice
   const handleCreateInvoice = async () => {
     if (creating) return;
+
+    // Validate before creating
+    const errors = validateInvoice();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors([]);
     setCreating(true);
 
     try {
@@ -280,7 +321,7 @@ export default function AdminPaymentsPage() {
         ...newInvoice,
         invoiceNo,
         createdAt: new Date().toISOString(),
-        status: "unpaid", // <-- already set to unpaid
+        status: "unpaid", // <-- ensure status is set here
       });
 
       setPayments((prev) => [
@@ -290,6 +331,7 @@ export default function AdminPaymentsPage() {
           ...newInvoice,
           invoiceNo,
           createdAt: new Date().toISOString(),
+          status: "unpaid", // <-- ensure status is set here too
         },
       ]);
       setShowNewInvoiceModal(false);
@@ -327,8 +369,163 @@ export default function AdminPaymentsPage() {
 
   // When closing the modal, also clear the saved notice
   const handleCloseModal = () => {
-    setModalPayment(null);
-    setShowSavedNotice(false);
+    if (isEditingItems && hasUnsavedInvoiceChanges()) {
+      setShowDiscardInvoiceConfirm(true);
+    } else {
+      setModalPayment(null);
+      setShowSavedNotice(false);
+      setIsEditingItems(false);
+    }
+  };
+
+  // Handler for Parent UID input
+  async function handleParentUidChange(e) {
+    const uid = e.target.value.trim();
+    setNewInvoice((prev) => ({ ...prev, userUID: uid }));
+    setUidWarning("");
+    setUidLoading(true);
+    if (!uid) {
+      setNewInvoice((prev) => ({
+        ...prev,
+        parentName: "",
+        paymentEmail: "",
+      }));
+      setUidLoading(false);
+      return;
+    }
+    try {
+      // Now using "users" collection
+      const userDoc = await getDoc(doc(db, "users", uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setNewInvoice((prev) => ({
+          ...prev,
+          parentName: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
+          paymentEmail: data.email || "", // <-- Only use the root "email" field
+        }));
+        setUidWarning("");
+      } else {
+        setNewInvoice((prev) => ({
+          ...prev,
+          parentName: "",
+          paymentEmail: "",
+        }));
+        setUidWarning("Not an existing parent UID!");
+      }
+    } catch {
+      setUidWarning("Not an existing parent UID!");
+      setNewInvoice((prev) => ({
+        ...prev,
+        parentName: "",
+        paymentEmail: "",
+      }));
+    } finally {
+      setUidLoading(false);
+    }
+  }
+
+  // Add validation function
+  const validateInvoice = () => {
+    const errors = [];
+
+    if (!newInvoice.parentName.trim()) {
+      errors.push("Parent name is required");
+    }
+
+    if (!newInvoice.paymentEmail.trim()) {
+      errors.push("Parent email is required");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newInvoice.paymentEmail)) {
+      errors.push("Please enter a valid email address");
+    }
+
+    if (!newInvoice.dueDate) {
+      errors.push("Due date is required");
+    }
+
+    const hasValidCharge = newInvoice.items.some(
+      (item) => item.description.trim() && item.amount > 0
+    );
+
+    if (!hasValidCharge) {
+      errors.push(
+        "At least one charge with description and amount > 0 is required"
+      );
+    }
+
+    return errors;
+  };
+
+  // Add function to check if modal has unsaved changes
+  const hasUnsavedChanges = () => {
+    return (
+      newInvoice.parentName.trim() ||
+      newInvoice.paymentEmail.trim() ||
+      newInvoice.dueDate ||
+      newInvoice.additionalNotes.trim() ||
+      newInvoice.userUID ||
+      newInvoice.items.some(
+        (item) =>
+          item.description.trim() ||
+          item.notes.trim() ||
+          item.amount > 0 ||
+          item.quantity !== 1
+      )
+    );
+  };
+
+  // Add function to check if existing invoice modal has unsaved changes
+  const hasUnsavedInvoiceChanges = () => {
+    if (!modalPayment || !isEditingItems) return false;
+
+    // Check if items have changed
+    const originalItems = Array.isArray(modalPayment.items)
+      ? modalPayment.items
+      : [];
+    if (editItems.length !== originalItems.length) return true;
+
+    const itemsChanged = editItems.some((item, idx) => {
+      const original = originalItems[idx];
+      if (!original) return true;
+      return (
+        item.description !== (original.description || "") ||
+        item.notes !== (original.notes || "") ||
+        Number(item.amount) !== Number(original.amount || 0) ||
+        Number(item.quantity) !== Number(original.quantity || 0)
+      );
+    });
+
+    // Check if other fields have changed
+    const notesChanged = editNotes !== (modalPayment.additionalNotes || "");
+    const dueDateChanged = editDueDate !== (modalPayment.dueDate || "");
+    const nameChanged =
+      modalPayment.parentName !== (modalPayment.parentName || "");
+    const emailChanged =
+      modalPayment.paymentEmail !== (modalPayment.paymentEmail || "");
+    const uidChanged = modalPayment.userUID !== (modalPayment.userUID || "");
+
+    return (
+      itemsChanged ||
+      notesChanged ||
+      dueDateChanged ||
+      nameChanged ||
+      emailChanged ||
+      uidChanged
+    );
+  };
+
+  // Add confirmation modal state
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  // Add confirmation modal state for existing invoice
+  const [showDiscardInvoiceConfirm, setShowDiscardInvoiceConfirm] =
+    useState(false);
+
+  // Update modal close handler
+  const handleCloseNewInvoiceModal = () => {
+    if (hasUnsavedChanges()) {
+      setShowDiscardConfirm(true);
+    } else {
+      setShowNewInvoiceModal(false);
+    }
   };
 
   return (
@@ -431,6 +628,7 @@ export default function AdminPaymentsPage() {
             <option value="All">All</option>
             <option value="paid">Paid</option>
             <option value="unpaid">Unpaid</option>
+            <option value="overdue">Overdue</option>
           </select>
         </label>
         <input
@@ -495,17 +693,22 @@ export default function AdminPaymentsPage() {
               <tr
                 key={payment.id}
                 style={{
-                  background: "#fafbfc",
+                  background: isOverdue(payment) ? "#fff5f5" : "#fafbfc",
                   borderRadius: 8,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)", // Subtle row shadow
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
                   transition: "background 0.2s, box-shadow 0.2s",
                   cursor: "pointer",
+                  border: isOverdue(payment) ? "1px solid #feb2b2" : "none",
                 }}
                 onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#f0f6ff")
+                  (e.currentTarget.style.background = isOverdue(payment)
+                    ? "#fef5f5"
+                    : "#f0f6ff")
                 }
                 onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#fafbfc")
+                  (e.currentTarget.style.background = isOverdue(payment)
+                    ? "#fff5f5"
+                    : "#fafbfc")
                 }
                 onClick={() => handleOpenModal(payment)} // Open modal on row click
               >
@@ -528,7 +731,11 @@ export default function AdminPaymentsPage() {
                   )}
                 </td>
                 <td style={{ textAlign: "center", padding: "14px 0" }}>
-                  <StatusBadge status={payment.status} />
+                  {/* Remove the div wrapper and emoji, just show the status badge */}
+                  <StatusBadge
+                    status={payment.status}
+                    isOverdue={isOverdue(payment)}
+                  />
                 </td>
                 {/* Removed the View button cell */}
               </tr>
@@ -670,7 +877,10 @@ export default function AdminPaymentsPage() {
                         <option value="unpaid">Unpaid</option>
                       </select>
                     ) : (
-                      <StatusBadge status={modalPayment.status} />
+                      <StatusBadge
+                        status={modalPayment.status}
+                        isOverdue={isOverdue(modalPayment)}
+                      />
                     )}
                   </div>
                 </div>
@@ -806,8 +1016,8 @@ export default function AdminPaymentsPage() {
               >
                 <thead style={{ background: "#f5f5f5" }}>
                   <tr>
-                    <th style={{ textAlign: "center" }}>Item</th>
-                    <th style={{ textAlign: "center" }}>Description / Notes</th>
+                    <th style={{ textAlign: "center" }}>Charge</th>
+                    <th style={{ textAlign: "center" }}>Description</th>
                     <th style={{ textAlign: "center" }}>Unit Price</th>
                     <th style={{ textAlign: "center" }}>Quantity</th>
                     <th style={{ textAlign: "center" }}>Subtotal</th>
@@ -1331,7 +1541,7 @@ export default function AdminPaymentsPage() {
             justifyContent: "center",
             zIndex: 2000,
           }}
-          onClick={() => setShowNewInvoiceModal(false)}
+          onClick={handleCloseNewInvoiceModal}
         >
           <div
             style={{
@@ -1340,12 +1550,90 @@ export default function AdminPaymentsPage() {
               borderRadius: 8,
               minWidth: 400,
               maxWidth: "90vw",
+              maxHeight: "90vh", // Limit modal height
+              overflowY: "auto", // Enable vertical scrolling
               boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
               position: "relative",
+              display: "flex",
+              flexDirection: "column",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ marginBottom: 16 }}>Create New Invoice</h2>
+            {validationErrors.length > 0 && (
+              <div
+                style={{
+                  background: "#fee",
+                  border: "1px solid #fcc",
+                  borderRadius: 4,
+                  padding: "0.75rem",
+                  marginBottom: 16,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 600,
+                    color: "#c33",
+                    marginBottom: 4,
+                  }}
+                >
+                  Please fix the following errors:
+                </div>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: "1.2rem",
+                    color: "#c33",
+                  }}
+                >
+                  {validationErrors.map((error, idx) => (
+                    <li key={idx}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div style={{ marginBottom: 12 }}>
+              <label>
+                Parent UID:
+                <br />
+                <input
+                  type="text"
+                  value={newInvoice.userUID || ""}
+                  onChange={handleParentUidChange}
+                  style={{
+                    width: "100%",
+                    padding: "0.5rem",
+                    background: "#f5f5f5",
+                    border: "1px solid #ccc",
+                    borderRadius: 4,
+                    marginTop: 4,
+                  }}
+                  placeholder="Paste the parent's UID here"
+                />
+                {uidWarning && (
+                  <div
+                    style={{
+                      color: "red",
+                      marginTop: 4,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {uidWarning}
+                  </div>
+                )}
+              </label>
+              {uidLoading && (
+                <div
+                  style={{
+                    color: "#888",
+                    marginTop: 4,
+                    fontWeight: 500,
+                  }}
+                >
+                  Looking up parent info...
+                </div>
+              )}
+            </div>
             <div style={{ marginBottom: 12 }}>
               <label>
                 Parent Name:
@@ -1365,6 +1653,7 @@ export default function AdminPaymentsPage() {
                     marginTop: 4,
                   }}
                   placeholder="Enter parent's full name"
+                  disabled={!!newInvoice.userUID && !uidWarning}
                 />
               </label>
             </div>
@@ -1390,29 +1679,7 @@ export default function AdminPaymentsPage() {
                     marginTop: 4,
                   }}
                   placeholder="Enter parent's email address"
-                />
-              </label>
-            </div>
-            {/* Move Parent UID here */}
-            <div style={{ marginBottom: 12 }}>
-              <label>
-                Parent UID:
-                <br />
-                <input
-                  type="text"
-                  value={newInvoice.userUID || ""}
-                  onChange={(e) =>
-                    setNewInvoice({ ...newInvoice, userUID: e.target.value })
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    background: "#f5f5f5",
-                    border: "1px solid #ccc",
-                    borderRadius: 4,
-                    marginTop: 4,
-                  }}
-                  placeholder="Paste the parent's UID here"
+                  disabled={!!newInvoice.userUID && !uidWarning}
                 />
               </label>
             </div>
@@ -1446,9 +1713,9 @@ export default function AdminPaymentsPage() {
                     marginBottom: 4,
                   }}
                 >
-                  Items:
+                  Charges:
                 </span>
-                {/* Table-like layout for item fields */}
+                {/* Table-like layout for charge fields */}
                 <div
                   style={{
                     display: "grid",
@@ -1461,8 +1728,8 @@ export default function AdminPaymentsPage() {
                     alignItems: "center",
                   }}
                 >
-                  <div>Item</div>
-                  <div>Description / Notes</div>
+                  <div>Charge</div>
+                  <div>Description</div>
                   <div style={{ textAlign: "left", paddingLeft: 2 }}>
                     Unit Price
                   </div>
@@ -1484,7 +1751,7 @@ export default function AdminPaymentsPage() {
                   >
                     <input
                       type="text"
-                      placeholder="Item"
+                      placeholder="Charge"
                       value={item.description}
                       onChange={(e) => {
                         const items = [...newInvoice.items];
@@ -1501,7 +1768,7 @@ export default function AdminPaymentsPage() {
                     />
                     <input
                       type="text"
-                      placeholder="Description / Notes"
+                      placeholder="Description"
                       value={item.notes}
                       onChange={(e) => {
                         const items = [...newInvoice.items];
@@ -1595,7 +1862,7 @@ export default function AdminPaymentsPage() {
                     })
                   }
                 >
-                  + Add Item
+                  + Add Charge
                 </button>
               </label>
             </div>
@@ -1647,7 +1914,13 @@ export default function AdminPaymentsPage() {
               </label>
             </div>
             <div
-              style={{ display: "flex", justifyContent: "flex-end", gap: 12 }}
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 12,
+                marginTop: "auto", // Push buttons to bottom
+                paddingTop: "1rem", // Add some spacing
+              }}
             >
               <button
                 style={{
@@ -1659,7 +1932,7 @@ export default function AdminPaymentsPage() {
                   fontWeight: 600,
                   cursor: "pointer",
                 }}
-                onClick={() => setShowNewInvoiceModal(false)}
+                onClick={handleCloseNewInvoiceModal}
               >
                 Cancel
               </button>
@@ -1677,6 +1950,178 @@ export default function AdminPaymentsPage() {
                 onClick={handleCreateInvoice}
               >
                 Create Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDiscardConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 3500,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: "2rem 2.5rem",
+              borderRadius: 8,
+              boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              minWidth: 320,
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 18,
+                marginBottom: 16,
+              }}
+            >
+              Discard changes?
+            </div>
+            <div style={{ marginBottom: 16, color: "#666" }}>
+              You have unsaved changes. Are you sure you want to close without
+              saving?
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 16,
+              }}
+            >
+              <button
+                style={{
+                  background: "#f44336",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "0.5rem 1.5rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  setShowDiscardConfirm(false);
+                  setShowNewInvoiceModal(false);
+                  setNewInvoice({
+                    parentName: "",
+                    paymentEmail: "",
+                    dueDate: "",
+                    items: [
+                      { description: "", notes: "", amount: 0, quantity: 1 },
+                    ],
+                    additionalNotes: "",
+                  });
+                  setValidationErrors([]);
+                }}
+              >
+                Discard
+              </button>
+              <button
+                style={{
+                  background: "#007bff",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "0.5rem 1.5rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                onClick={() => setShowDiscardConfirm(false)}
+              >
+                Keep Editing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showDiscardInvoiceConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            width: "100vw",
+            height: "100vh",
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 4000,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              padding: "2rem 2.5rem",
+              borderRadius: 8,
+              boxShadow: "0 2px 16px rgba(0,0,0,0.2)",
+              minWidth: 320,
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 600,
+                fontSize: 18,
+                marginBottom: 16,
+              }}
+            >
+              Discard changes?
+            </div>
+            <div style={{ marginBottom: 16, color: "#666" }}>
+              You have unsaved changes to this invoice. Are you sure you want to
+              close without saving?
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                gap: 16,
+              }}
+            >
+              <button
+                style={{
+                  background: "#f44336",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "0.5rem 1.5rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  setShowDiscardInvoiceConfirm(false);
+                  setModalPayment(null);
+                  setShowSavedNotice(false);
+                  setIsEditingItems(false);
+                }}
+              >
+                Discard
+              </button>
+              <button
+                style={{
+                  background: "#007bff",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "0.5rem 1.5rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+                onClick={() => setShowDiscardInvoiceConfirm(false)}
+              >
+                Keep Editing
               </button>
             </div>
           </div>
