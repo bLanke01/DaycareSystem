@@ -436,12 +436,12 @@ const ParentSearchSystem = ({ className = '', onChildClick }) => {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case 'child': return 'bg-blue-100 text-blue-800';
-      case 'activity': return 'bg-green-100 text-green-800';
-      case 'message': return 'bg-purple-100 text-purple-800';
-      case 'schedule': return 'bg-orange-100 text-orange-800';
-      case 'invoice': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'child': return 'bg-primary/20 text-primary-content';
+      case 'activity': return 'bg-success/20 text-success-content';
+      case 'message': return 'bg-secondary/20 text-secondary-content';
+      case 'schedule': return 'bg-warning/20 text-warning-content';
+      case 'invoice': return 'bg-error/20 text-error-content';
+              default: return 'bg-base-200 text-base-content';
     }
   };
 

@@ -20,68 +20,70 @@ const UserTypeSelection = () => {
   };
 
   const handleSignupAsStaff = () => {
-    alert('Admin accounts can only be created by existing administrators. Please contact the daycare administrator for assistance.');
+    alert('Admin accounts can only be created by existing administrators. Please contact Francesca for assistance.');
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="card w-full max-w-3xl bg-base-100 shadow-xl">
-        <div className="card-body">
-          <div className="flex flex-col items-center gap-4 mb-8">
-            <div className="avatar placeholder">
-              <div className="bg-primary text-primary-content rounded-full w-16">
-                <span className="text-2xl">D</span>
-              </div>
-            </div>
-            <h1 className="text-2xl font-bold text-center">Daycare Management</h1>
+    <div className="grid md:grid-cols-2 gap-8">
+      {/* Parent Access Card */}
+                  <div className="card bg-gradient-to-br from-secondary/15 to-primary/10 border border-primary/20">
+        <div className="card-body text-center p-8">
+          <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-white text-2xl font-bold">P</span>
+          </div>
+          <h3 className="text-2xl font-bold text-primary mb-4">Parent Access</h3>
+          <p className="text-base-content mb-8 leading-relaxed">
+            For parents and guardians to manage their children's daycare experience
+          </p>
+          
+          <div className="space-y-4">
+            <button 
+              className="btn btn-primary w-full btn-lg"
+              onClick={handleLoginAsCustomer}
+            >
+              Log in as Parent
+            </button>
+            <button 
+              className="btn btn-outline btn-secondary w-full btn-lg"
+              onClick={handleSignupAsCustomer}
+            >
+              Sign up as Parent
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Staff/Admin Access Card */}
+                  <div className="card bg-gradient-to-br from-base-300 to-accent/10 border border-accent/20">
+        <div className="card-body text-center p-8">
+          <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-white text-2xl font-bold">S</span>
+          </div>
+          <h3 className="text-2xl font-bold text-primary mb-4">Staff/Admin Access</h3>
+          <p className="text-base-content mb-8 leading-relaxed">
+            For daycare staff and administrators to manage operations
+          </p>
+          
+          <div className="space-y-4">
+            <button 
+              className="btn btn-primary w-full btn-lg"
+              onClick={handleLoginAsStaff}
+            >
+              Log in as Staff
+            </button>
+            <button 
+              className="btn btn-disabled w-full btn-lg"
+              onClick={handleSignupAsStaff}
+              title="Admin accounts can only be created by existing administrators"
+            >
+              Sign up as Staff
+            </button>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Parent Card */}
-            <div className="card bg-base-200">
-              <div className="card-body items-center text-center">
-                <h2 className="card-title mb-4">Parent Access</h2>
-                <div className="flex flex-col gap-3 w-full">
-                  <button 
-                    className="btn btn-primary"
-                    onClick={handleLoginAsCustomer}
-                  >
-                    Log in as Parent
-                  </button>
-                  <button 
-                    className="btn btn-secondary"
-                    onClick={handleSignupAsCustomer}
-                  >
-                    Sign up as Parent
-                  </button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Admin Card */}
-            <div className="card bg-base-200">
-              <div className="card-body items-center text-center">
-                <h2 className="card-title mb-4">Staff/Admin Access</h2>
-                <div className="flex flex-col gap-3 w-full">
-                  <button 
-                    className="btn btn-primary"
-                    onClick={handleLoginAsStaff}
-                  >
-                    Log in as Staff
-                  </button>
-                  <button 
-                    className="btn btn-disabled"
-                    onClick={handleSignupAsStaff}
-                    title="Admin accounts can only be created by existing administrators"
-                  >
-                    Sign up as Staff
-                  </button>
-                </div>
-                <div className="mt-2">
-                  <p className="text-sm text-base-content/70">* Admin accounts are pre-created by system administrators</p>
-                </div>
-              </div>
-            </div>
+          <div className="mt-6 p-4 bg-info/10 rounded-lg">
+            <p className="text-sm text-base-content/90">
+              Admin accounts are pre-created by Francesca
+            </p>
           </div>
         </div>
       </div>

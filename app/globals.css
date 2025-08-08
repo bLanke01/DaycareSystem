@@ -2,6 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Ensure theme applies to the root elements */
+html, body {
+  @apply bg-base-100 text-base-content;
+}
+
+/* Improved text readability */
+@layer base {
+  /* Ensure minimum contrast for readability */
+  .text-base-content\/50 {
+    color: hsl(var(--bc) / 0.9);
+  }
+  
+  .text-base-content\/60 {
+    color: hsl(var(--bc) / 0.95);
+  }
+  
+  .text-base-content\/70 {
+    color: hsl(var(--bc) / 1);
+  }
+  
+  .text-base-content\/80 {
+    color: hsl(var(--bc) / 1);
+  }
+  
+  /* Ensure all text is readable */
+  p, span, div, li, td, th {
+    @apply text-base-content;
+  }
+  
+  /* Secondary text should still be readable */
+  .text-secondary {
+    opacity: 0.95;
+  }
+  
+  .text-muted {
+    @apply text-base-content;
+    opacity: 0.9;
+  }
+}
+
 /* Enhanced Accessibility Styles */
 @layer base {
   /* Focus indicators for better keyboard navigation */
@@ -75,15 +115,15 @@
 
   /* Improved color contrast for text */
   .text-base-content {
-    color: hsl(var(--bc) / 0.87);
+    color: hsl(var(--bc) / 1);
   }
 
   .text-base-content\/70 {
-    color: hsl(var(--bc) / 0.7);
+    color: hsl(var(--bc) / 1);
   }
 
   .text-base-content\/50 {
-    color: hsl(var(--bc) / 0.5);
+    color: hsl(var(--bc) / 0.9);
   }
 }
 

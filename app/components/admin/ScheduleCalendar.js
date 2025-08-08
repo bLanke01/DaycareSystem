@@ -158,14 +158,14 @@ export default function StaffSchedulePage() {
           {editingEventId ? (
             <button
               onClick={handleUpdateEvent}
-              className="bg-yellow-500 text-white px-4 py-2 rounded w-full"
+              className="bg-warning text-warning-content px-4 py-2 rounded w-full"
             >
               Update Event
             </button>
           ) : (
             <button
               onClick={handleAddEvent}
-              className="bg-blue-500 text-white px-4 py-2 rounded w-full"
+              className="bg-primary text-primary-content px-4 py-2 rounded w-full"
             >
               Add Event
             </button>
@@ -181,7 +181,7 @@ export default function StaffSchedulePage() {
               setEditingEventId(null);
               setNewEvent({ title: "", start: "", end: "" });
             }}
-            className="text-sm text-gray-500 underline"
+            className="text-sm text-base-content/90 underline"
           >
             Cancel Editing
           </button>
@@ -210,21 +210,21 @@ export default function StaffSchedulePage() {
       {/* Modal for Edit/Delete Options */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[300px] shadow-lg">
+          <div className="bg-base-100 rounded-lg p-6 w-[300px] shadow-lg">
             <h2 className="text-lg font-semibold mb-4">Do you want to edit or <br />
               delete this event?</h2>
             <p className="text-sm mb-4">{selectedEvent.title}</p>
 
             <div className="flex justify-end gap-2">
               <button
-                className="bg-gray-300 text-black px-3 py-1 rounded"
+                className="bg-base-300 text-base-content px-3 py-1 rounded"
                 onClick={() => setSelectedEvent(null)}
               >
                 Cancel
               </button>
 
               <button
-                className="bg-yellow-500 text-white px-3 py-1 rounded"
+                                  className="bg-warning text-warning-content px-3 py-1 rounded"
                 onClick={() => {
                   setNewEvent({
                     title: selectedEvent.title,
@@ -243,7 +243,7 @@ export default function StaffSchedulePage() {
               </button>
 
               <button
-                className="bg-red-500 text-white px-3 py-1 rounded"
+                                  className="bg-error text-error-content px-3 py-1 rounded"
                 onClick={() => {
                   handleDelete(selectedEvent.id);
                   setSelectedEvent(null);
