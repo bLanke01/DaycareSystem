@@ -3,9 +3,8 @@
 //Ji, this is your admin messaging system. i didnt use component for admin system because i made  chat window and messaging list and made it both admin and parent dashboard call it. if you made any changes to other files, please add a comment that you did make changes so we dont get conflict when merging.
 
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react'; // Add useRef back
 import { db, storage } from '../../firebase/config';
-
 import {
   collection,
   query,
@@ -16,12 +15,15 @@ import {
   doc,
   serverTimestamp,
   where,
-  getDocs
+  getDocs,
+  getDoc,    // Add this
+  setDoc     // Add this
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
 const MessageSystem = () => {
+  // 1. State declarations
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedParent, setSelectedParent] = useState(null);
@@ -30,7 +32,50 @@ const MessageSystem = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [parentDisplayNames, setParentDisplayNames] = useState({});
+  const [editingParent, setEditingParent] = useState(null);
+  const [newParentName, setNewParentName] = useState('');
   const messagesEndRef = useRef(null);
+
+  // 2. Helper functions that don't depend on other functions
+  // Get display name for parent (use custom name if set, otherwise use email)
+  const getParentDisplayName = (parentEmail) => {
+    const displayName = parentDisplayNames[parentEmail] || parentEmail;
+    console.log('Getting display name for:', parentEmail, '->', displayName);
+    return displayName;
+  };
+
+  // Add CSS for scrollbar styling
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .chat-area::-webkit-scrollbar {
+        width: 8px;
+      }
+      .chat-area::-webkit-scrollbar-track {
+        background: rgba(116,185,255,0.2);
+        border-radius: 10px;
+      }
+      .chat-area::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #74b9ff, #0984e3);
+        border-radius: 10px;
+      }
+      .chat-area::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #0984e3, #2d3436);
+      }
+      .chat-area {
+        scrollbar-width: thin;
+        scrollbar-color: #74b9ff rgba(116,185,255,0.2);
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
 
   // Get logged-in admin's email
   useEffect(() => {
@@ -54,15 +99,19 @@ const MessageSystem = () => {
     return () => unsubscribe();
   }, []);
 
+  // 4. Computed values that depend on state and helper functions
   // Get unique parent senders
   const parents = Array.from(
     new Set(messages.filter(m => m.sender !== 'Admin').map(m => m.sender))
   );
 
-  // Filter parents based on search term
-  const filteredParents = parents.filter(parent =>
-    parent.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter parents based on search term - THIS SHOULD NOW WORK
+  const filteredParents = parents.filter(parent => {
+    const displayName = getParentDisplayName(parent);
+    const searchLower = searchTerm.toLowerCase();
+    return parent.toLowerCase().includes(searchLower) || 
+           displayName.toLowerCase().includes(searchLower);
+  });
 
   // Filter conversation with selected parent
   const conversation = messages.filter(
@@ -269,6 +318,9 @@ const MessageSystem = () => {
       setSelectedFile(null);
       const fileInput = document.getElementById('adminFileInput');
       if (fileInput) fileInput.value = '';
+      
+      // Auto-scroll to bottom after sending message
+      setTimeout(() => scrollToBottom(), 200);
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -498,16 +550,106 @@ const MessageSystem = () => {
     );
   };
 
-  // Add this function to scroll to bottom
+  // Add this function after your state declarations:
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Auto-scroll to bottom when conversation changes
+  // Add this useEffect after your existing useEffects:
   useEffect(() => {
-    scrollToBottom();
-  }, [conversation]);
+    // Auto-scroll to bottom when conversation changes or new messages arrive
+    if (conversation.length > 0) {
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [conversation.length, selectedParent]);
 
+  // Load parent display names from Firestore
+  useEffect(() => {
+    console.log('Setting up real-time listener for parent display names...');
+    
+    // Set up real-time listener for parent display names
+    const q = query(collection(db, 'parentDisplayNames'));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const names = {};
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        names[doc.id] = data.displayName;
+        console.log('Real-time update - display name:', doc.id, '->', data.displayName);
+      });
+      
+      setParentDisplayNames(names);
+      console.log('Parent display names updated in real-time:', names);
+    }, (error) => {
+      console.error('Error in parent display names listener:', error);
+    });
+    
+    return () => {
+      console.log('Cleaning up parent display names listener');
+      unsubscribe();
+    };
+  }, []);
+
+  // 5. Other functions
+  // Start editing a parent's name
+  const startEditingParent = (parentEmail) => {
+    setEditingParent(parentEmail);
+    setNewParentName(getParentDisplayName(parentEmail));
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingParent(null);
+    setNewParentName('');
+  };
+
+  // Save the new parent name
+  const saveParentName = async () => {
+    if (!newParentName.trim() || !editingParent) return;
+    
+    try {
+      console.log('Saving parent name:', editingParent, '->', newParentName.trim());
+      
+      // First, check if document exists
+      const parentDocRef = doc(db, 'parentDisplayNames', editingParent);
+      const parentDoc = await getDoc(parentDocRef);
+      
+      if (parentDoc.exists()) {
+        // Document exists, update it
+        await updateDoc(parentDocRef, {
+          displayName: newParentName.trim(),
+          updatedAt: serverTimestamp(),
+          updatedBy: adminEmail
+        });
+        console.log('Updated existing parent display name');
+      } else {
+        // Document doesn't exist, create it using setDoc
+        await setDoc(parentDocRef, {
+          email: editingParent,
+          displayName: newParentName.trim(),
+          createdAt: serverTimestamp(),
+          createdBy: adminEmail
+        });
+        console.log('Created new parent display name document');
+      }
+
+      // Update local state immediately
+      setParentDisplayNames(prev => ({
+        ...prev,
+        [editingParent]: newParentName.trim()
+      }));
+
+      setEditingParent(null);
+      setNewParentName('');
+      
+      console.log(`Parent name saved successfully: ${editingParent} -> ${newParentName.trim()}`);
+      
+    } catch (error) {
+      console.error('Error saving parent name:', error);
+      alert('Error saving parent name. Please try again.');
+    }
+  };
+
+  // 6. Return statement
   return (
     <div style={{ 
       display: 'flex', 
@@ -524,16 +666,16 @@ const MessageSystem = () => {
         style={{
           position: 'absolute',
           top: 20,
-          left: sidebarVisible ? 320 : 20,
+          left: sidebarVisible ? 260 : 20, 
           zIndex: 1000,
           background: 'linear-gradient(135deg, #74b9ff, #0984e3)',
           color: '#fff',
           border: 'none',
           borderRadius: '50%',
-          width: 40,
-          height: 40,
+          width: 35,
+          height: 35,
           cursor: 'pointer',
-          fontSize: 16,
+          fontSize: 14, 
           fontWeight: 'bold',
           boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
           transition: 'all 0.3s ease',
@@ -548,23 +690,26 @@ const MessageSystem = () => {
       {/* Parent List Sidebar - Collapsible */}
       {sidebarVisible && (
         <div style={{
-          width: 350,
-          padding: 20,
+          width: 280, 
+          padding: 15,
           background: 'linear-gradient(135deg, #81ecec, #74b9ff)',
           boxShadow: '2px 0 15px rgba(0,0,0,0.1)',
           borderRadius: '25px 0 0 25px',
-          minWidth: 300,
+          minWidth: 250,
+          maxWidth: 280, 
           flexShrink: 0,
-          transition: 'all 0.3s ease'
+          transition: 'all 0.3s ease',
+          overflow: 'hidden',
+          boxSizing: 'border-box'
         }}>
           <h3 style={{
             color: '#fff',
             textAlign: 'center',
-            marginBottom: 20,
-            fontSize: 22,
+            marginBottom: 15, 
+            fontSize: 18, 
             fontWeight: 'bold',
             textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-            marginTop: 30
+            marginTop: 20 
           }}>
             👨‍👩‍👧‍👦 Parents
           </h3>
@@ -575,84 +720,196 @@ const MessageSystem = () => {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             style={{
-              width: '100%',
-              marginBottom: 20,
-              padding: '15px 18px',
-              borderRadius: 20,
+              width: 'calc(100% - 20px)',
+              marginBottom: 15,
+              padding: '10px 15px', 
+              borderRadius: 15, 
               border: 'none',
-              fontSize: 16,
+              fontSize: 14, 
               background: '#fff',
               outline: 'none',
               boxShadow: '0 3px 10px rgba(0,0,0,0.1) inset',
               transition: 'box-shadow 0.2s',
-              fontWeight: '500'
+              fontWeight: '500',
+              boxSizing: 'border-box'
             }}
           />
           
+          {/* Replace your parent list items with this more compact version: */}
           <ul style={{ 
             listStyle: 'none', 
             padding: 0, 
             margin: 0, 
             maxHeight: 400, 
             overflowY: 'auto',
+            overflowX: 'hidden',
             scrollbarWidth: 'thin',
-            scrollbarColor: '#fff #74b9ff'
+            scrollbarColor: 'rgba(255,255,255,0.3) transparent',
+            wordWrap: 'break-word',
+            wordBreak: 'break-word',
+            boxSizing: 'border-box'
           }}>
             {filteredParents.map(parent => (
               <li
                 key={parent}
-                onClick={() => setSelectedParent(parent)}
                 style={{
                   position: 'relative',
-                  padding: '15px 20px',
-                  marginBottom: 10,
-                  borderRadius: 18,
+                  padding: '8px 12px', 
+                  marginBottom: 6, 
+                  borderRadius: 12,
                   background: selectedParent === parent 
                     ? 'linear-gradient(135deg, #fd79a8, #fdcb6e)' 
                     : 'rgba(255,255,255,0.9)',
                   color: selectedParent === parent ? '#fff' : '#333',
                   fontWeight: selectedParent === parent ? 'bold' : '500',
-                  fontSize: 16,
-                  cursor: 'pointer',
+                  fontSize: 14, 
+                  cursor: editingParent === parent ? 'default' : 'pointer',
                   boxShadow: selectedParent === parent 
-                    ? '0 4px 15px rgba(253,121,168,0.4)' 
-                    : '0 2px 8px rgba(0,0,0,0.1)',
-                  border: selectedParent === parent ? '2px solid #fd79a8' : 'none',
+                    ? '0 2px 8px rgba(253,121,168,0.3)' 
+                    : '0 1px 4px rgba(0,0,0,0.1)',
+                  border: selectedParent === parent ? '1px solid #fd79a8' : 'none', 
                   transition: 'all 0.2s ease',
-                  transform: selectedParent === parent ? 'scale(1.02)' : 'scale(1)',
-                }}
-                onMouseOver={e => {
-                  if (selectedParent !== parent) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,1)';
-                    e.currentTarget.style.transform = 'scale(1.01)';
-                  }
-                }}
-                onMouseOut={e => {
-                  if (selectedParent !== parent) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.9)';
-                    e.currentTarget.style.transform = 'scale(1)';
-                  }
+                  transform: selectedParent === parent ? 'scale(1.01)' : 'scale(1)', 
+                  minWidth: 0,
+                  maxWidth: '100%',
+                  overflow: 'visible',
+                  boxSizing: 'border-box',
+                  minHeight: '32px'
                 }}
               >
-                👤 {parent}
-                {unreadCounts[parent] > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    right: 15,
-                    top: 12,
-                    background: 'linear-gradient(135deg, #e84393, #fd79a8)',
-                    color: 'white',
-                    borderRadius: '50%',
-                    padding: '4px 8px',
-                    fontSize: 12,
-                    fontWeight: 'bold',
-                    minWidth: 20,
-                    textAlign: 'center',
-                    boxShadow: '0 2px 8px rgba(232,67,147,0.4)',
-                    animation: 'pulse 2s infinite'
-                  }}>
-                    {unreadCounts[parent]}
-                  </span>
+                {editingParent === parent ? (
+                  // Edit mode - more compact
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}> {/* Reduced gap */}
+                    <input
+                      type="text"
+                      value={newParentName}
+                      onChange={(e) => setNewParentName(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') saveParentName();
+                        if (e.key === 'Escape') cancelEditing();
+                      }}
+                      style={{
+                        padding: '6px 8px', // Reduced padding
+                        borderRadius: 8, // Reduced border radius
+                        border: '1px solid #74b9ff', // Reduced border width
+                        fontSize: 12, // Reduced font size
+                        fontWeight: 'bold',
+                        outline: 'none',
+                        background: '#fff',
+                        color: '#333'
+                      }}
+                      placeholder="Enter display name..."
+                      autoFocus
+                    />
+                    <div style={{ display: 'flex', gap: 4 }}> {/* Reduced gap */}
+                      <button
+                        onClick={saveParentName}
+                        style={{
+                          padding: '3px 6px', // Reduced padding
+                          borderRadius: 6, // Reduced border radius
+                          border: 'none',
+                          background: '#00b894',
+                          color: '#fff',
+                          fontSize: 10, // Reduced font size
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        ✅ Save
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        style={{
+                          padding: '3px 6px', // Reduced padding
+                          borderRadius: 6,
+                          border: 'none',
+                          background: '#e17055',
+                          color: '#fff',
+                          fontSize: 10, // Reduced font size
+                          cursor: 'pointer',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        ❌ Cancel
+                      </button>
+                    </div>
+                    <div style={{ fontSize: 9, color: '#636e72', fontStyle: 'italic' }}> {/* Reduced font size */}
+                      Original: {parent}
+                    </div>
+                  </div>
+                ) : (
+                  // Normal display mode - more compact
+                  <div onClick={() => setSelectedParent(parent)}>
+                    <span style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxWidth: '180px', // Increased since overall size is smaller
+                      display: 'inline-block',
+                      fontSize: '14px', // Explicit font size
+                      lineHeight: '1.2' // Tighter line height
+                    }}>
+                      👤 {getParentDisplayName(parent)}
+                    </span>
+                    
+                    {/* Edit button - smaller */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startEditingParent(parent);
+                      }}
+                      style={{
+                        position: 'absolute',
+                        right: unreadCounts[parent] > 0 ? 28 : 8, // Reduced spacing
+                        top: 6, // Adjusted top position
+                        background: 'rgba(116,185,255,0.2)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: 18, // Reduced from 24px
+                        height: 18, // Reduced from 24px
+                        cursor: 'pointer',
+                        fontSize: 10, // Reduced font size
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        opacity: 0.7
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.background = 'rgba(116,185,255,0.4)';
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.transform = 'scale(1.1)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.background = 'rgba(116,185,255,0.2)';
+                        e.currentTarget.style.opacity = '0.7';
+                        e.currentTarget.style.transform = 'scale(1)';
+                      }}
+                      title="Edit parent name"
+                    >
+                      ✏️
+                    </button>
+
+                    {/* Unread count badge - smaller */}
+                    {unreadCounts[parent] > 0 && (
+                      <span style={{
+                        position: 'absolute',
+                        right: 8, // Reduced spacing
+                        top: 6, // Adjusted top position
+                        background: 'linear-gradient(135deg, #e84393, #fd79a8)',
+                        color: 'white',
+                        borderRadius: '50%',
+                        padding: '2px 6px', // Reduced padding
+                        fontSize: 10, // Reduced font size
+                        fontWeight: 'bold',
+                        minWidth: 16, // Reduced minimum width
+                        textAlign: 'center',
+                        boxShadow: '0 1px 4px rgba(232,67,147,0.4)', // Reduced shadow
+                        animation: 'pulse 2s infinite'
+                      }}>
+                        {unreadCounts[parent]}
+                      </span>
+                    )}
+                  </div>
                 )}
               </li>
             ))}
@@ -681,7 +938,17 @@ const MessageSystem = () => {
               marginBottom: 20,
               textShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
-              💬 Chat with {selectedParent} 💬
+              💬 Chat with {getParentDisplayName(selectedParent)} 💬
+              {getParentDisplayName(selectedParent) !== selectedParent && (
+                <div style={{ 
+                  fontSize: 14, 
+                  fontWeight: 'normal', 
+                  color: '#636e72',
+                  fontStyle: 'italic' 
+                }}>
+                  ({selectedParent})
+                </div>
+              )}
             </h3>
             
             <div
@@ -696,15 +963,14 @@ const MessageSystem = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 boxShadow: '0 8px 25px rgba(116,185,255,0.3)',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
               }}
-              className="hide-scrollbar"
+              className="chat-area"
             >
               {conversation
                 .sort((a, b) => (a.date?.seconds || 0) - (b.date?.seconds || 0))
                 .map(renderMessage)}
               
+              {/* Add this back for auto-scroll target */}
               <div ref={messagesEndRef} />
             </div>
 

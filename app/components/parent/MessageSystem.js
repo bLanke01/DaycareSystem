@@ -1,8 +1,10 @@
 //Ji, i didnt use component for message system on this part but i put yours here and linked it to the admin/parent/message like you did so you can continue working here for your part. for notifications, theres already a js file you can use in here so please check if you need it. they are made so you are able to send notifications through emails if they marked "check" on email notications.
 
-import { useEffect, useState } from 'react';
-import { db } from '../../firebase/config';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
+import { useEffect, useState, useRef } from 'react'; // Add useRef here
+import { db, storage } from '../../firebase/config'; // Also need to add storage import
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, where, getDocs } from 'firebase/firestore';
+import {ref, uploadBytes, getDownloadURL} from 'firebase/storage';
+import { getAuth } from 'firebase/auth';
 
 export default function ParentMessagesPage() {
   const [messages, setMessages] = useState([]);
@@ -13,8 +15,8 @@ export default function ParentMessagesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
-  const messagesEndRef = useRef(null);
-  const messagesContainerRef = useRef(null);
+  const messagesEndRef = useRef(null); 
+  const messagesContainerRef = useRef(null); 
 
   // Auto-scroll to bottom function
   const scrollToBottom = () => {
@@ -81,11 +83,47 @@ export default function ParentMessagesPage() {
         scrollbar-width: none;
         -ms-overflow-style: none;
       }
+      
+      /* Custom Chat Area Scrollbar for Parent */
+      .parent-chat-area::-webkit-scrollbar {
+        width: 10px;
+      }
+      .parent-chat-area::-webkit-scrollbar-track {
+        background: rgba(255,107,107,0.2);
+        border-radius: 15px;
+        margin: 10px 0;
+      }
+      .parent-chat-area::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+        border-radius: 15px;
+        border: 2px solid rgba(255,107,107,0.2);
+      }
+      .parent-chat-area::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #ee5a52, #e84393);
+        transform: scale(1.1);
+      }
+      .parent-chat-area::-webkit-scrollbar-thumb:active {
+        background: linear-gradient(135deg, #e84393, #2d3436);
+      }
+      
+      /* Firefox support */
+      .parent-chat-area {
+        scrollbar-width: thin;
+        scrollbar-color: #ff6b6b rgba(255,107,107,0.2);
+      }
+      
+      .messages-container {
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
     `;
     document.head.appendChild(style);
     
     return () => {
-      document.head.removeChild(style);
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
     };
   }, []);
 
@@ -460,22 +498,66 @@ export default function ParentMessagesPage() {
         
         {/* Search Results Dropdown */}
         {showSearch && searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-base-100 border border-base-300 rounded-lg shadow-xl z-50 max-h-48 overflow-y-auto">
+          <div style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: 8,
+            background: '#fff',
+            border: '2px solid #ff6b6b', // Match parent theme
+            borderRadius: 15,
+            boxShadow: '0 8px 25px rgba(255,107,107,0.3)', // Match parent theme
+            zIndex: 50,
+            maxHeight: 200,
+            overflowY: 'auto',
+            overflowX: 'hidden' // Prevent horizontal scroll
+          }}>
             {searchResults.map(msg => (
               <div
                 key={msg.id}
                 onClick={() => scrollToMessage(msg.id)}
-                className="p-3 border-b border-base-300 cursor-pointer hover:bg-base-200 transition-colors flex justify-between items-center"
+                style={{
+                  padding: 12,
+                  borderBottom: '1px solid rgba(255,107,107,0.2)',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  wordWrap: 'break-word',
+                  wordBreak: 'break-word'
+                }}
+                onMouseOver={e => e.currentTarget.style.background = 'rgba(255,107,107,0.1)'}
+                onMouseOut={e => e.currentTarget.style.background = 'transparent'}
               >
-                <div className="flex-1 min-w-0">
-                  <div className={`font-semibold text-sm ${msg.sender === parentEmail ? 'text-primary' : 'text-secondary'}`}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontWeight: 'bold',
+                    fontSize: 14,
+                    color: msg.sender === parentEmail ? '#ff6b6b' : '#4ecdc4',
+                    marginBottom: 2
+                  }}>
                     {msg.sender === parentEmail ? '😊 You' : '👨‍💼 Admin'}
                   </div>
-                  <div className="text-sm text-base-content/70 truncate max-w-xs">
+                  <div style={{
+                    fontSize: 13,
+                    color: '#636e72',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: '300px'
+                  }}>
                     {(msg.fileUrl || msg.fileData) ? `📎 ${msg.fileName}` : msg.content}
                   </div>
                 </div>
-                <div className="text-xs text-base-content/50 italic flex-shrink-0">
+                <div style={{
+                  fontSize: 11,
+                  color: '#636e72',
+                  fontStyle: 'italic',
+                  flexShrink: 0,
+                  marginLeft: 10
+                }}>
                   {msg.date?.toDate ? msg.date.toDate().toLocaleTimeString() : ''}
                 </div>
               </div>
@@ -500,17 +582,19 @@ export default function ParentMessagesPage() {
           border: '3px solid #ff6b6b',
           padding: 25,
           height: 400,
-          overflowY: 'auto',
+          overflowY: 'auto', // Keep vertical scrolling
+          overflowX: 'hidden', // Hide horizontal scrolling
           marginBottom: 20,
           background: 'linear-gradient(135deg, #dda0dd, #98d8c8)',
           borderRadius: 30,
           display: 'flex',
           flexDirection: 'column',
           boxShadow: '0 8px 25px rgba(255,107,107,0.3)',
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
+          wordWrap: 'break-word',
+          wordBreak: 'break-word',
+          position: 'relative' // Add this for better scrollbar positioning
         }}
-        className="hide-scrollbar"
+        className="parent-chat-area messages-container" // Add parent-chat-area class
       >
         {messages
           .sort((a, b) => (a.date?.seconds || 0) - (b.date?.seconds || 0))
