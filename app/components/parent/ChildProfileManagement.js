@@ -27,12 +27,37 @@ export default function ChildProfileManagement() {
     const unsubscribe = onSnapshot(
       childrenQuery,
       (snapshot) => {
-        const childrenData = [];
-        snapshot.forEach(doc => {
-          childrenData.push({ id: doc.id, ...doc.data() });
-        });
-        setChildren(childrenData);
-        setLoading(false);
+        try {
+          const childrenData = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            // Ensure all required fields exist with safe defaults and convert to strings
+            childrenData.push({ 
+              id: doc.id, 
+              firstName: data.firstName || 'Unknown',
+              lastName: data.lastName || 'Unknown',
+              dateOfBirth: data.dateOfBirth || null,
+              gender: data.gender || 'Not specified',
+              group: data.group || 'Not assigned',
+              allergies: String(data.allergies || ''),
+              medicalConditions: String(data.medicalConditions || ''),
+              medications: String(data.medications || ''),
+              emergencyContact: String(data.emergencyContact || ''),
+              emergencyPhone: String(data.emergencyPhone || ''),
+              emergencyRelationship: String(data.emergencyRelationship || ''),
+              dietaryRestrictions: String(data.dietaryRestrictions || ''),
+              notes: String(data.notes || ''),
+              parentRegistered: data.parentRegistered || false,
+              ...data
+            });
+          });
+          setChildren(childrenData);
+          setLoading(false);
+        } catch (err) {
+          console.error('Error processing children data:', err);
+          setError('Error processing children data');
+          setLoading(false);
+        }
       },
       (error) => {
         console.error('Error fetching children:', error);
@@ -45,16 +70,27 @@ export default function ChildProfileManagement() {
   }, [user?.uid]);
 
   const handleViewChild = (child) => {
+    if (!child || !child.id) {
+      setError('Invalid child data');
+      return;
+    }
     setSelectedChild(child);
     setShowModal(true);
   };
 
   const handleEditChild = (child) => {
+    if (!child || !child.id) {
+      setError('Invalid child data');
+      return;
+    }
     setEditingChild({ ...child });
   };
 
   const handleSaveChildEdit = async () => {
-    if (!editingChild) return;
+    if (!editingChild || !editingChild.id) {
+      setError('Invalid child data for editing');
+      return;
+    }
 
     try {
       const childRef = doc(db, 'children', editingChild.id);
@@ -70,6 +106,7 @@ export default function ChildProfileManagement() {
         updatedAt: new Date()
       });
       setEditingChild(null);
+      setError(''); // Clear any previous errors
     } catch (error) {
       console.error('Error updating child:', error);
       setError('Failed to update child information');
@@ -78,15 +115,37 @@ export default function ChildProfileManagement() {
 
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return 'Unknown';
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    const age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
     
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      return age - 1;
+    try {
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      
+      // Check if the date is valid
+      if (isNaN(birthDate.getTime())) {
+        return 'Invalid date';
+      }
+      
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        return age - 1;
+      }
+      return age;
+    } catch (error) {
+      console.error('Error calculating age:', error);
+      return 'Error';
     }
-    return age;
+  };
+
+  const getChildStatus = (child) => {
+    if (!child) return 'Unknown';
+    
+    if (child.parentRegistered) {
+      return { text: '✓ Registered', color: 'badge-success' };
+    } else {
+      return { text: '⏳ Pending Registration', color: 'badge-warning' };
+    }
   };
 
   if (loading) {
@@ -99,8 +158,12 @@ export default function ChildProfileManagement() {
 
   if (error) {
     return (
-      <div className="alert alert-error">
+      <div className="alert alert-error shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
         <span>{error}</span>
+        <button className="btn btn-sm" onClick={() => setError('')}>Dismiss</button>
       </div>
     );
   }
@@ -108,52 +171,99 @@ export default function ChildProfileManagement() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">My Children</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-primary">My Children</h1>
+          <p className="text-base-content/70 mt-2">Manage your children's information and profiles</p>
+        </div>
+        <div className="stats shadow">
+          <div className="stat">
+            <div className="stat-title">Total Children</div>
+            <div className="stat-value text-primary">{children.length}</div>
+          </div>
+        </div>
       </div>
 
       {children.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-6xl mb-4">👶</div>
           <h3 className="text-xl font-semibold mb-2">No Children Found</h3>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-4">
             Contact your daycare administrator to add your children to the system.
           </p>
+          <div className="alert alert-info max-w-md mx-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Once children are added, you'll be able to view and manage their information here.</span>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {children.map((child) => (
-            <div key={child.id} className="card bg-base-100 shadow-xl">
-              <div className="card-body">
-                <h2 className="card-title">
-                  {child.firstName} {child.lastName}
-                </h2>
-                <div className="space-y-2">
-                  <p><strong>Age:</strong> {calculateAge(child.dateOfBirth)} years old</p>
-                  <p><strong>Group:</strong> {child.group || 'Not assigned'}</p>
-                  {child.allergies && (
-                    <p><strong>Allergies:</strong> {child.allergies}</p>
-                  )}
-                  {child.medicalConditions && (
-                    <p><strong>Medical:</strong> {child.medicalConditions}</p>
-                  )}
-                </div>
-                <div className="card-actions justify-end mt-4">
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleViewChild(child)}
-                  >
-                    View Details
-                  </button>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => handleEditChild(child)}
-                  >
-                    Edit Info
-                  </button>
+          {children.map((child) => {
+            const status = getChildStatus(child);
+            return (
+              <div key={child.id} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 border-l-4 border-l-primary">
+                <div className="card-body">
+                  <div className="flex justify-between items-start mb-3">
+                    <h2 className="card-title text-xl text-primary">
+                      {child.firstName} {child.lastName}
+                    </h2>
+                    <span className={`badge ${status.color}`}>
+                      {status.text}
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">👶</span>
+                      <span><strong>Age:</strong> {calculateAge(child.dateOfBirth)} years old</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">👥</span>
+                      <span><strong>Group:</strong> {child.group}</span>
+                    </div>
+                    
+                    {child.allergies && typeof child.allergies === 'string' && child.allergies.trim() && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">⚠️</span>
+                        <span><strong>Allergies:</strong> {child.allergies}</span>
+                      </div>
+                    )}
+                    
+                    {child.medicalConditions && typeof child.medicalConditions === 'string' && child.medicalConditions.trim() && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">💊</span>
+                        <span><strong>Medical:</strong> {child.medicalConditions}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="card-actions justify-end mt-4">
+                    <button
+                      className="btn btn-primary btn-sm gap-2"
+                      onClick={() => handleViewChild(child)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View Details
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm gap-2"
+                      onClick={() => handleEditChild(child)}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit Info
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -161,14 +271,14 @@ export default function ChildProfileManagement() {
       {editingChild && (
         <div className="modal modal-open">
           <div className="modal-box w-11/12 max-w-2xl">
-            <h3 className="font-bold text-lg mb-4">
+            <h3 className="font-bold text-lg mb-4 text-primary">
               Edit {editingChild.firstName}'s Information
             </h3>
             
             <div className="space-y-4">
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Allergies</span>
+                  <span className="label-text font-semibold">Allergies</span>
                 </label>
                 <textarea
                   className="textarea textarea-bordered"
@@ -183,7 +293,7 @@ export default function ChildProfileManagement() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Medical Conditions</span>
+                  <span className="label-text font-semibold">Medical Conditions</span>
                 </label>
                 <textarea
                   className="textarea textarea-bordered"
@@ -198,7 +308,7 @@ export default function ChildProfileManagement() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Medications</span>
+                  <span className="label-text font-semibold">Medications</span>
                 </label>
                 <textarea
                   className="textarea textarea-bordered"
@@ -213,7 +323,7 @@ export default function ChildProfileManagement() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Emergency Contact Name</span>
+                  <span className="label-text font-semibold">Emergency Contact Name</span>
                 </label>
                 <input
                   type="text"
@@ -229,7 +339,7 @@ export default function ChildProfileManagement() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Emergency Contact Phone</span>
+                  <span className="label-text font-semibold">Emergency Contact Phone</span>
                 </label>
                 <input
                   type="tel"
@@ -245,7 +355,7 @@ export default function ChildProfileManagement() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Emergency Contact Relationship</span>
+                  <span className="label-text font-semibold">Emergency Contact Relationship</span>
                 </label>
                 <input
                   type="text"
@@ -261,7 +371,7 @@ export default function ChildProfileManagement() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Dietary Restrictions</span>
+                  <span className="label-text font-semibold">Dietary Restrictions</span>
                 </label>
                 <textarea
                   className="textarea textarea-bordered"
@@ -276,7 +386,7 @@ export default function ChildProfileManagement() {
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Additional Notes</span>
+                  <span className="label-text font-semibold">Additional Notes</span>
                 </label>
                 <textarea
                   className="textarea textarea-bordered"

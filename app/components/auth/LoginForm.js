@@ -22,6 +22,7 @@ const LoginForm = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   
   const { signIn } = useAuth();
   
@@ -148,7 +149,7 @@ const LoginForm = () => {
   };
   
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-base-200">
       <div className="card w-full max-w-md bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="tabs tabs-boxed justify-center mb-6">
@@ -228,7 +229,7 @@ const LoginForm = () => {
                 <span className="label-text">Password</span>
               </label>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
@@ -237,6 +238,15 @@ const LoginForm = () => {
                 disabled={loading || googleLoading}
                 placeholder="Enter your password"
               />
+              <label className="label">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={showPassword}
+                  onChange={() => setShowPassword(!showPassword)}
+                />
+                <span className="label-text-alt">Show password</span>
+              </label>
             </div>
             
             <button 

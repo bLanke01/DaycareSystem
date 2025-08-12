@@ -1,9 +1,8 @@
-//Ji, i didnt use component for message system on this part but i put yours here and linked it to the admin/parent/message like you did so you can continue working here for your part. for notifications, theres already a js file you can use in here so please check if you need it. they are made so you are able to send notifications through emails if they marked "check" on email notications.
+// components/parent/MessageSystem.js - Enhanced messaging system
 
 import { useEffect, useState, useRef } from 'react';
-import { db, storage } from '../../firebase/config';
+import { db } from '../../firebase/config';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
 export default function ParentMessagesPage() {
@@ -15,6 +14,8 @@ export default function ParentMessagesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [newMessageNotification, setNewMessageNotification] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -53,6 +54,8 @@ export default function ParentMessagesPage() {
     const q = query(collection(db, 'messages'), orderBy('date', 'asc'));
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const msgs = [];
+      let unread = 0;
+      
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         if (
@@ -60,17 +63,76 @@ export default function ParentMessagesPage() {
           (data.sender === 'Admin' && data.recipient === parentEmail)
         ) {
           msgs.push({ id: doc.id, ...data });
+          
+          // Count unread messages from admin
+          if (data.sender === 'Admin' && data.recipient === parentEmail && !data.read) {
+            unread++;
+          }
         }
       });
+      
       setMessages(msgs);
+      setUnreadCount(unread);
+      
+      // Check for new messages from admin ONLY (not from parent)
+      if (messages.length > 0 && msgs.length > messages.length) {
+        const newMessages = msgs.filter(msg => 
+          !messages.find(oldMsg => oldMsg.id === msg.id)
+        );
+        
+        // Show notification ONLY for new messages FROM admin TO parent
+        const newAdminMessages = newMessages.filter(msg => 
+          msg.sender === 'Admin' && msg.recipient === parentEmail
+        );
+        
+        if (newAdminMessages.length > 0) {
+          setNewMessageNotification(true);
+          
+          // Auto-hide notification after 5 seconds
+          setTimeout(() => setNewMessageNotification(false), 5000);
+          
+          // Play notification sound if available
+          if (typeof window !== 'undefined' && window.AudioContext) {
+            try {
+              const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+              const oscillator = audioContext.createOscillator();
+              const gainNode = audioContext.createGain();
+              
+              oscillator.connect(gainNode);
+              gainNode.connect(audioContext.destination);
+              
+              oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+              oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+              
+              gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+              
+              oscillator.start(audioContext.currentTime);
+              oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (error) {
+              console.log('Audio notification not supported');
+            }
+          }
+        }
+      }
     });
     return () => unsubscribe();
-  }, [parentEmail]);
+  }, [parentEmail, messages.length]);
 
   // Auto-scroll when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Update notification bell when unread count changes
+  useEffect(() => {
+    if (typeof window !== 'undefined' && unreadCount >= 0) {
+      // Trigger notification bell refresh when unread count changes
+      window.dispatchEvent(new CustomEvent('unreadCountChanged', {
+        detail: { unreadCount, userId: parentEmail }
+      }));
+    }
+  }, [unreadCount, parentEmail]);
 
   // Add CSS for hiding scrollbar
   useEffect(() => {
@@ -91,79 +153,85 @@ export default function ParentMessagesPage() {
     };
   }, []);
 
-  // Enhanced file upload with better error handling
+  // Enhanced file upload with base64 approach (same as admin system)
   const uploadFile = async (file) => {
-    console.log('Starting file upload:', file.name, file.size, file.type);
-    
-    const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `messages/${fileName}`);
+    console.log('Processing file:', file.name, file.size, file.type);
     
     try {
-      console.log('Uploading to Firebase Storage...');
-      const snapshot = await uploadBytes(storageRef, file);
-      console.log('Upload successful, getting download URL...');
+      // For images, convert to base64 with compression
+      if (file.type.startsWith('image/')) {
+        const base64 = await convertImageToBase64(file);
+        console.log('Image converted to base64, size:', base64.length);
+        
+        return {
+          url: base64,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          isBase64: true
+        };
+      }
       
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log('Download URL obtained:', downloadURL);
+      // For other files, use base64 as well
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
       return {
-        url: downloadURL,
+        url: base64,
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        isBase64: true
       };
     } catch (error) {
-      console.error('Error uploading file:', error);
-      throw new Error(`Failed to upload file: ${error.message}`);
+      console.error('Error processing file:', error);
+      throw new Error(`Failed to process file: ${error.message}`);
     }
   };
 
-  // Check if admin has email notifications enabled
-  const checkAdminEmailNotifications = async () => {
-    try {
-      const adminsQuery = query(
-        collection(db, 'users'), 
-        where('role', '==', 'admin'),
-        where('emailNotifications', '==', true)
-      );
-      const adminSnapshot = await getDocs(adminsQuery);
-      return !adminSnapshot.empty;
-    } catch (error) {
-      console.error('Error checking admin email notifications:', error);
-      return false;
-    }
-  };
-
-  // Send email notification (if available)
-  const sendEmailNotification = async (messageContent, hasFile = false) => {
-    try {
-      const shouldSendEmail = await checkAdminEmailNotifications();
-      if (!shouldSendEmail) return;
-
-      // This assumes you have an email notification function/API
-      // Replace with your actual email notification system
-      const emailData = {
-        to: 'admin@daycare.com', // Replace with actual admin email
-        subject: 'New Message from Parent',
-        html: `
-          <h2>New Message from Parent</h2>
-          <p><strong>From:</strong> ${parentEmail}</p>
-          <p><strong>Message:</strong> ${messageContent}</p>
-          ${hasFile ? '<p><strong>📎 File attachment included</strong></p>' : ''}
-          <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-          <hr>
-          <p><em>Please log into the daycare system to view the full message.</em></p>
-        `
-      };
-
-      // Call your email notification function here
-      // Example: await sendNotificationEmail(emailData);
-      console.log('Email notification prepared:', emailData);
+  // Convert image to base64 with compression (same as admin system)
+  const convertImageToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
       
-    } catch (error) {
-      console.error('Error sending email notification:', error);
-    }
+      img.onload = () => {
+        // Calculate new dimensions (max 400x400 for chat images)
+        const maxSize = 400;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        // Set canvas dimensions
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to base64 with quality 0.8 (80%) for chat images
+        const base64 = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(base64);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   // Fixed search function to handle fileData properly
@@ -182,7 +250,7 @@ export default function ParentMessagesPage() {
     }
   };
 
-  // Enhanced send function with email notifications
+  // Enhanced send function with base64 file handling (same as admin system)
   const handleSend = async (e) => {
     e.preventDefault();
     if ((!newMessage.trim() && !selectedFile) || !parentEmail) return;
@@ -205,45 +273,21 @@ export default function ParentMessagesPage() {
         console.log('Processing file:', selectedFile.name, selectedFile.type, selectedFile.size);
         hasFile = true;
         
-        // Use Firebase Storage for files larger than 500KB
-        if (selectedFile.size > 500 * 1024) {
-          console.log('Using Firebase Storage for large file');
+        // Always use base64 for all files (same as admin system)
+        console.log('Converting file to base64...');
+        
+        try {
+          const fileData = await uploadFile(selectedFile);
+          messageData.fileUrl = fileData.url;
+          messageData.fileName = fileData.name;
+          messageData.fileSize = fileData.size;
+          messageData.fileType = fileData.type;
+          messageData.content = messageContent || `📎 Sent a file: ${fileData.name}`;
           
-          try {
-            const fileData = await uploadFile(selectedFile);
-            messageData.fileUrl = fileData.url;
-            messageData.fileName = fileData.name;
-            messageData.fileSize = fileData.size;
-            messageData.fileType = fileData.type;
-            messageData.content = messageContent || `📎 Sent a file: ${fileData.name}`;
-            
-            console.log('File uploaded to Firebase Storage successfully');
-          } catch (uploadError) {
-            console.error('Firebase Storage upload failed:', uploadError);
-            throw new Error('Failed to upload file. Please try a smaller file or check your internet connection.');
-          }
-        } else {
-          console.log('Using base64 for small file');
-          
-          // Use base64 for small files
-          const base64 = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              console.log('File converted to base64');
-              resolve(reader.result);
-            };
-            reader.onerror = (error) => {
-              console.error('Error reading file:', error);
-              reject(error);
-            };
-            reader.readAsDataURL(selectedFile);
-          });
-          
-          messageData.fileData = base64;
-          messageData.fileName = selectedFile.name;
-          messageData.fileSize = selectedFile.size;
-          messageData.fileType = selectedFile.type;
-          messageData.content = messageContent || `📎 Sent a file: ${selectedFile.name}`;
+          console.log('File converted to base64 successfully');
+        } catch (uploadError) {
+          console.error('Base64 conversion failed:', uploadError);
+          throw new Error('Failed to process file. Please try a smaller file.');
         }
       } else {
         messageData.content = messageContent;
@@ -253,8 +297,7 @@ export default function ParentMessagesPage() {
       await addDoc(collection(db, 'messages'), messageData);
       console.log('Message saved successfully!');
       
-      // Send email notification to admin if enabled
-      await sendEmailNotification(messageData.content, hasFile);
+
       
       setNewMessage('');
       setSelectedFile(null);
@@ -269,16 +312,16 @@ export default function ParentMessagesPage() {
     }
   };
 
-  // Enhanced file selection with better size limits
+  // Enhanced file selection with better size limits (same as admin system)
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
     console.log('File selected:', file.name, file.size, file.type);
     
-    // Check file size (limit to 10MB for Firebase Storage)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size should be less than 10MB');
+    // Check file size (limit to 5MB for base64 storage - same as admin)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size should be less than 5MB for base64 storage');
       return;
     }
     
@@ -297,43 +340,69 @@ export default function ParentMessagesPage() {
     console.log('File validation passed');
   };
 
-  const renderMessage = (msg) => {
-    const isMe = msg.sender === parentEmail;
-    const isImage = msg.fileType?.startsWith('image/');
-    const isFile = (msg.fileUrl || msg.fileData) && !isImage;
-    const fileSource = msg.fileUrl || msg.fileData;
+  // Mark message as read
+  const markAsRead = async (messageId) => {
+    try {
+      const messageRef = doc(db, 'messages', messageId);
+      await updateDoc(messageRef, { read: true });
+      
+      // Update local unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
+      
+      // Force notification bell to refresh by triggering a custom event
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('messageRead', {
+          detail: { messageId, userId: parentEmail }
+        }));
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  };
 
+  // Render message
+  const renderMessage = (msg) => {
+    const isOwnMessage = msg.sender === parentEmail;
+    const isAdminMessage = msg.sender === 'Admin';
+    
+    // Mark admin messages as read when viewed (not just when clicked)
+    if (isAdminMessage && !msg.read) {
+      // Use setTimeout to avoid blocking the render
+      setTimeout(() => {
+        markAsRead(msg.id);
+      }, 100);
+    }
+    
     return (
       <div
         key={msg.id}
         id={`message-${msg.id}`}
         style={{
           display: 'flex',
-          justifyContent: isMe ? 'flex-end' : 'flex-start',
-          margin: '12px 0',
-          transition: 'background 0.3s ease'
+          justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
+          marginBottom: 20
         }}
       >
         <div
           style={{
-            background: isMe 
+            background: isOwnMessage 
               ? 'linear-gradient(135deg, #ff6b6b, #ff8e8e)' 
               : 'linear-gradient(135deg, #4ecdc4, #44a08d)',
             color: '#fff',
-            borderRadius: isMe ? '25px 25px 5px 25px' : '25px 25px 25px 5px',
+            borderRadius: isOwnMessage ? '25px 25px 5px 25px' : '25px 25px 25px 5px',
             padding: '15px 20px',
             maxWidth: '70%',
             boxShadow: '0 4px 15px rgba(0,0,0,0.15)',
             fontSize: 16,
             position: 'relative',
-            transform: isMe ? 'rotate(1deg)' : 'rotate(-1deg)',
+            transform: isOwnMessage ? 'rotate(1deg)' : 'rotate(-1deg)',
             transition: 'transform 0.2s ease',
           }}
           onMouseOver={e => {
             e.currentTarget.style.transform = 'rotate(0deg) scale(1.02)';
           }}
           onMouseOut={e => {
-            e.currentTarget.style.transform = isMe ? 'rotate(1deg) scale(1)' : 'rotate(-1deg) scale(1)';
+            e.currentTarget.style.transform = isOwnMessage ? 'rotate(1deg) scale(1)' : 'rotate(-1deg) scale(1)';
           }}
         >
           <div style={{ 
@@ -342,14 +411,14 @@ export default function ParentMessagesPage() {
             marginBottom: 5,
             textShadow: '0 1px 2px rgba(0,0,0,0.2)'
           }}>
-            {isMe ? '😊 You' : '👨‍💼 Admin'}
+            {isOwnMessage ? '😊 You' : '👨‍💼 Admin'}
           </div>
           
           {/* Image preview */}
-          {isImage && fileSource && (
+          {msg.fileType?.startsWith('image/') && (
             <div style={{ marginBottom: 10 }}>
               <img
-                src={fileSource}
+                src={msg.fileUrl || msg.fileData}
                 alt={msg.fileName}
                 style={{
                   maxWidth: '200px',
@@ -358,16 +427,16 @@ export default function ParentMessagesPage() {
                   cursor: 'pointer',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
                 }}
-                onClick={() => window.open(fileSource, '_blank')}
+                onClick={() => window.open(msg.fileUrl || msg.fileData, '_blank')}
               />
             </div>
           )}
           
           {/* File download link */}
-          {isFile && (
+          {(msg.fileUrl || msg.fileData) && !msg.fileType?.startsWith('image/') && (
             <div style={{ marginBottom: 10 }}>
               <a
-                href={fileSource}
+                href={msg.fileUrl || msg.fileData}
                 download={msg.fileName}
                 style={{
                   color: '#fff',
@@ -522,7 +591,7 @@ export default function ParentMessagesPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Enhanced File preview */}
+      {/* Enhanced File preview with base64 indicator */}
       {selectedFile && (
         <div style={{
           padding: 15,
@@ -555,10 +624,21 @@ export default function ParentMessagesPage() {
               fontSize: 12, 
               color: '#636e72',
               display: 'flex',
-              gap: 10
+              gap: 10,
+              alignItems: 'center'
             }}>
               <span>Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
               <span>Type: {selectedFile.type.split('/')[1]?.toUpperCase() || 'FILE'}</span>
+              <span style={{ 
+                background: '#00b894',
+                color: '#fff',
+                padding: '2px 8px',
+                borderRadius: 10,
+                fontSize: 10,
+                fontWeight: 'bold'
+              }}>
+                BASE64
+              </span>
             </div>
           </div>
           
@@ -586,6 +666,47 @@ export default function ParentMessagesPage() {
             onMouseOver={e => e.currentTarget.style.transform = 'scale(1.1)'}
             onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'
             }
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Floating notification banner */}
+      {newMessageNotification && (
+        <div style={{
+          position: 'absolute',
+          top: 20,
+          right: 20,
+          zIndex: 1001,
+          background: 'linear-gradient(135deg, #e84393, #fd79a8)',
+          color: '#fff',
+          padding: '15px 20px',
+          borderRadius: 20,
+          boxShadow: '0 8px 25px rgba(232,67,147,0.4)',
+          animation: 'bounce 1s infinite',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontSize: 16,
+          fontWeight: 'bold',
+          border: '2px solid #fff'
+        }}>
+          🔔 New message received from Admin!
+          <button
+            onClick={() => setNewMessageNotification(false)}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              color: '#fff',
+              borderRadius: '50%',
+              width: 24,
+              height: 24,
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 'bold',
+              marginLeft: 10
+            }}
           >
             ✕
           </button>

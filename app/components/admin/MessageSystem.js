@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { db, storage } from '../../firebase/config';
+import { db } from '../../firebase/config';
 import {
   collection,
   query,
@@ -14,7 +14,6 @@ import {
   where,
   getDocs
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
 const MessageSystem = () => {
@@ -26,6 +25,7 @@ const MessageSystem = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [newMessageNotification, setNewMessageNotification] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Get logged-in admin's email
@@ -45,10 +45,49 @@ const MessageSystem = () => {
       querySnapshot.forEach((doc) => {
         msgs.push({ id: doc.id, ...doc.data() });
       });
+      
+      // Check for new messages
+      if (messages.length > 0 && msgs.length > messages.length) {
+        const newMessages = msgs.filter(msg => 
+          !messages.find(oldMsg => oldMsg.id === msg.id)
+        );
+        
+        // Show notification for new messages from parents
+        if (newMessages.some(msg => msg.sender !== 'Admin')) {
+          setNewMessageNotification(true);
+          
+          // Auto-hide notification after 5 seconds
+          setTimeout(() => setNewMessageNotification(false), 5000);
+          
+          // Play notification sound if available
+          if (typeof window !== 'undefined' && window.AudioContext) {
+            try {
+              const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+              const oscillator = audioContext.createOscillator();
+              const gainNode = audioContext.createGain();
+              
+              oscillator.connect(gainNode);
+              gainNode.connect(audioContext.destination);
+              
+              oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+              oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+              
+              gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+              gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+              
+              oscillator.start(audioContext.currentTime);
+              oscillator.stop(audioContext.currentTime + 0.2);
+            } catch (error) {
+              console.log('Audio notification not supported');
+            }
+          }
+        }
+      }
+      
       setMessages(msgs);
     });
     return () => unsubscribe();
-  }, []);
+  }, [messages.length]);
 
   // Get unique parent senders
   const parents = Array.from(
@@ -89,32 +128,85 @@ const MessageSystem = () => {
     });
   }, [selectedParent, conversation]);
 
-  // Enhanced file upload with hybrid approach
+  // Enhanced file upload with base64 approach (no Firebase Storage needed)
   const uploadFile = async (file) => {
-    console.log('Starting file upload:', file.name, file.size, file.type);
-    
-    const timestamp = Date.now();
-    const fileName = `${timestamp}_${file.name}`;
-    const storageRef = ref(storage, `messages/${fileName}`);
+    console.log('Processing file:', file.name, file.size, file.type);
     
     try {
-      console.log('Uploading to Firebase Storage...');
-      const snapshot = await uploadBytes(storageRef, file);
-      console.log('Upload successful, getting download URL...');
+      // For images, convert to base64 with compression
+      if (file.type.startsWith('image/')) {
+        const base64 = await convertImageToBase64(file);
+        console.log('Image converted to base64, size:', base64.length);
+        
+        return {
+          url: base64,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          isBase64: true
+        };
+      }
       
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      console.log('Download URL obtained:', downloadURL);
+      // For other files, use base64 as well
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
       
       return {
-        url: downloadURL,
+        url: base64,
         name: file.name,
         size: file.size,
-        type: file.type
+        type: file.type,
+        isBase64: true
       };
     } catch (error) {
-      console.error('Error uploading file:', error);
-      throw new Error(`Failed to upload file: ${error.message}`);
+      console.error('Error processing file:', error);
+      throw new Error(`Failed to process file: ${error.message}`);
     }
+  };
+
+  // Convert image to base64 with compression
+  const convertImageToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 400x400 for chat images)
+        const maxSize = 400;
+        let { width, height } = img;
+        
+        if (width > height) {
+          if (width > maxSize) {
+            height = (height * maxSize) / width;
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = (width * maxSize) / height;
+            height = maxSize;
+          }
+        }
+        
+        // Set canvas dimensions
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw and compress image
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to base64 with quality 0.8 (80%) for chat images
+        const base64 = canvas.toDataURL('image/jpeg', 0.8);
+        resolve(base64);
+      };
+      
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
   };
 
   // Enhanced file selection with better validation
@@ -124,9 +216,9 @@ const MessageSystem = () => {
     
     console.log('File selected:', file.name, file.size, file.type);
     
-    // Check file size (limit to 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size should be less than 10MB');
+    // Check file size (limit to 5MB for base64 storage)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size should be less than 5MB for base64 storage');
       return;
     }
     
@@ -145,48 +237,7 @@ const MessageSystem = () => {
     console.log('File validation passed');
   };
 
-  // Check if parent has email notifications enabled
-  const checkParentEmailNotifications = async (parentEmail) => {
-    try {
-      const parentQuery = query(
-        collection(db, 'users'), 
-        where('email', '==', parentEmail),
-        where('emailNotifications', '==', true)
-      );
-      const parentSnapshot = await getDocs(parentQuery);
-      return !parentSnapshot.empty;
-    } catch (error) {
-      console.error('Error checking parent email notifications:', error);
-      return false;
-    }
-  };
 
-  // Send email notification to parent (if enabled)
-  const sendEmailNotification = async (parentEmail, messageContent, hasFile = false) => {
-    try {
-      const shouldSendEmail = await checkParentEmailNotifications(parentEmail);
-      if (!shouldSendEmail) return;
-
-      const emailData = {
-        to: parentEmail,
-        subject: 'New Message from Daycare Admin',
-        html: `
-          <h2>New Message from Daycare Admin</h2>
-          <p><strong>From:</strong> Admin</p>
-          <p><strong>Message:</strong> ${messageContent}</p>
-          ${hasFile ? '<p><strong>📎 File attachment included</strong></p>' : ''}
-          <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-          <hr>
-          <p><em>Please log into the daycare system to view the full message.</em></p>
-        `
-      };
-
-      console.log('Email notification prepared:', emailData);
-      
-    } catch (error) {
-      console.error('Error sending email notification:', error);
-    }
-  };
 
   // Enhanced reply function with hybrid file upload
   const handleReply = async (e) => {
@@ -210,45 +261,21 @@ const MessageSystem = () => {
         console.log('Processing file:', selectedFile.name, selectedFile.type, selectedFile.size);
         hasFile = true;
         
-        // Use Firebase Storage for files larger than 500KB
-        if (selectedFile.size > 500 * 1024) {
-          console.log('Using Firebase Storage for large file');
+        // Always use base64 for all files
+        console.log('Converting file to base64...');
+        
+        try {
+          const fileData = await uploadFile(selectedFile);
+          messageData.fileUrl = fileData.url;
+          messageData.fileName = fileData.name;
+          messageData.fileSize = fileData.size;
+          messageData.fileType = fileData.type;
+          messageData.content = messageContent || `📎 Sent a file: ${fileData.name}`;
           
-          try {
-            const fileData = await uploadFile(selectedFile);
-            messageData.fileUrl = fileData.url;
-            messageData.fileName = fileData.name;
-            messageData.fileSize = fileData.size;
-            messageData.fileType = fileData.type;
-            messageData.content = messageContent || `📎 Sent a file: ${fileData.name}`;
-            
-            console.log('File uploaded to Firebase Storage successfully');
-          } catch (uploadError) {
-            console.error('Firebase Storage upload failed:', uploadError);
-            throw new Error('Failed to upload file. Please try a smaller file or check your internet connection.');
-          }
-        } else {
-          console.log('Using base64 for small file');
-          
-          // Use base64 for small files
-          const base64 = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              console.log('File converted to base64');
-              resolve(reader.result);
-            };
-            reader.onerror = (error) => {
-              console.error('Error reading file:', error);
-              reject(error);
-            };
-            reader.readAsDataURL(selectedFile);
-          });
-          
-          messageData.fileData = base64;
-          messageData.fileName = selectedFile.name;
-          messageData.fileSize = selectedFile.size;
-          messageData.fileType = selectedFile.type;
-          messageData.content = messageContent || `📎 Sent a file: ${selectedFile.name}`;
+          console.log('File converted to base64 successfully');
+        } catch (uploadError) {
+          console.error('Base64 conversion failed:', uploadError);
+          throw new Error('Failed to process file. Please try a smaller file.');
         }
       } else {
         messageData.content = messageContent;
@@ -258,8 +285,7 @@ const MessageSystem = () => {
       await addDoc(collection(db, 'messages'), messageData);
       console.log('Message saved successfully!');
 
-      // Send email notification to parent if enabled
-      await sendEmailNotification(selectedParent, messageData.content, hasFile);
+
 
       setReply('');
       setSelectedFile(null);
@@ -407,11 +433,9 @@ const MessageSystem = () => {
     );
   };
 
-  // Enhanced file preview with size indicator
+  // Enhanced file preview with base64 indicator
   const renderFilePreview = () => {
     if (!selectedFile) return null;
-    
-    const isLargeFile = selectedFile.size > 500 * 1024;
     
     return (
       <div style={{
@@ -451,14 +475,14 @@ const MessageSystem = () => {
             <span>Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</span>
             <span>Type: {selectedFile.type.split('/')[1]?.toUpperCase() || 'FILE'}</span>
             <span style={{ 
-              background: isLargeFile ? '#ff6b6b' : '#00b894',
+              background: '#00b894',
               color: '#fff',
               padding: '2px 8px',
               borderRadius: 10,
               fontSize: 10,
               fontWeight: 'bold'
             }}>
-              {isLargeFile ? 'STORAGE' : 'INSTANT'}
+              BASE64
             </span>
           </div>
         </div>
@@ -514,6 +538,33 @@ const MessageSystem = () => {
       overflow: 'hidden',
       position: 'relative'
     }}>
+      {/* CSS Animations for ping effect */}
+      <style jsx>{`
+        @keyframes ping {
+          75%, 100% {
+            transform: scale(2);
+            opacity: 0;
+          }
+        }
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+        @keyframes bounce {
+          0%, 100% {
+            transform: translateY(-25%);
+            animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+          }
+          50% {
+            transform: translateY(0);
+            animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+          }
+        }
+      `}</style>
       {/* Toggle Button */}
       <button
         onClick={() => setSidebarVisible(!sidebarVisible)}
@@ -563,6 +614,24 @@ const MessageSystem = () => {
             marginTop: 30
           }}>
             👨‍👩‍👧‍👦 Parents
+            {/* Notification indicator */}
+            {Object.keys(unreadCounts).length > 0 && (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                marginLeft: 15,
+                background: 'linear-gradient(135deg, #e84393, #fd79a8)',
+                padding: '6px 12px',
+                borderRadius: 20,
+                fontSize: 14,
+                fontWeight: 'bold',
+                boxShadow: '0 4px 15px rgba(232,67,147,0.4)',
+                animation: 'bounce 1s infinite'
+              }}>
+                🔔 {Object.values(unreadCounts).reduce((a, b) => a + b, 0)} New
+              </div>
+            )}
           </h3>
           
           <input
@@ -630,26 +699,41 @@ const MessageSystem = () => {
                   }
                 }}
               >
-                👤 {parent}
-                {unreadCounts[parent] > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    right: 15,
-                    top: 12,
-                    background: 'linear-gradient(135deg, #e84393, #fd79a8)',
-                    color: 'white',
-                    borderRadius: '50%',
-                    padding: '4px 8px',
-                    fontSize: 12,
-                    fontWeight: 'bold',
-                    minWidth: 20,
-                    textAlign: 'center',
-                    boxShadow: '0 2px 8px rgba(232,67,147,0.4)',
-                    animation: 'pulse 2s infinite'
-                  }}>
-                    {unreadCounts[parent]}
-                  </span>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>👤 {parent}</span>
+                  
+                  {/* Enhanced notification with ping animation and message count */}
+                  {unreadCounts[parent] > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {/* Ping animation */}
+                      <div style={{
+                        width: 8,
+                        height: 8,
+                        background: '#e84393',
+                        borderRadius: '50%',
+                        animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                        boxShadow: '0 0 0 0 rgba(232, 67, 147, 0.7)'
+                      }}></div>
+                      
+                      {/* Message count ping */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, #e84393, #fd79a8)',
+                        color: 'white',
+                        borderRadius: '50%',
+                        padding: '6px 10px',
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        minWidth: 24,
+                        textAlign: 'center',
+                        boxShadow: '0 4px 15px rgba(232,67,147,0.4)',
+                        animation: 'bounce 1s infinite',
+                        border: '2px solid #fff'
+                      }}>
+                        {unreadCounts[parent]}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
@@ -810,6 +894,47 @@ const MessageSystem = () => {
           </div>
         )}
       </div>
+
+      {/* Floating notification banner */}
+      {newMessageNotification && (
+        <div style={{
+          position: 'absolute',
+          top: 20,
+          right: 20,
+          zIndex: 1001,
+          background: 'linear-gradient(135deg, #e84393, #fd79a8)',
+          color: '#fff',
+          padding: '15px 20px',
+          borderRadius: 20,
+          boxShadow: '0 8px 25px rgba(232,67,147,0.4)',
+          animation: 'bounce 1s infinite',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontSize: 16,
+          fontWeight: 'bold',
+          border: '2px solid #fff'
+        }}>
+          🔔 New message received!
+          <button
+            onClick={() => setNewMessageNotification(false)}
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              color: '#fff',
+              borderRadius: '50%',
+              width: 24,
+              height: 24,
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 'bold',
+              marginLeft: 10
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 };

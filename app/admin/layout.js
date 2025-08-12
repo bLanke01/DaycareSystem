@@ -7,14 +7,17 @@ import { useAuth } from '../firebase/auth-context';
 import { withAuth } from '../utils/with-auth';
 import AdminSidebar from '../components/layout/AdminSidebar';
 import Breadcrumbs from '../components/layout/Breadcrumbs';
-import SearchSystem from '../components/admin/SearchSystem';
 import ChildDetailsModal from '../components/admin/ChildDetailsModal';
+import NotificationBell from '../components/shared/NotificationBell';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 const AdminDashboardLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedChild, setSelectedChild] = useState(null);
   const [showChildModal, setShowChildModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [profilePicture, setProfilePicture] = useState('');
   const router = useRouter();
   const pathname = usePathname();
   const { user, logOut } = useAuth();
@@ -55,6 +58,25 @@ const AdminDashboardLayout = ({ children }) => {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [sidebarOpen]);
+
+  // Load profile picture from Firestore
+  useEffect(() => {
+    const loadProfilePicture = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          setProfilePicture(userDoc.data().photoURL || '');
+        }
+      } catch (error) {
+        console.error('Error loading profile picture:', error);
+      }
+    };
+
+    loadProfilePicture();
+  }, [user?.uid]);
 
   // Get page title from pathname
   const getPageTitle = () => {
@@ -135,108 +157,84 @@ const AdminDashboardLayout = ({ children }) => {
               
             </div>
 
-            {/* Center Search */}
-            <div className="flex-none hidden lg:block">
-              <SearchSystem className="w-72" onChildClick={handleChildClick} />
-            </div>
+            
 
             {/* Right Actions */}
-            <div className="flex-none flex items-center gap-2 px-3">
-              {/* Notifications */}
-              <div className="dropdown dropdown-end">
-                <button 
-                  tabIndex={0} 
-                  className="btn btn-ghost btn-circle indicator"
-                  aria-label="View notifications"
-                  aria-haspopup="true"
-                >
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className="h-5 w-5" 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  <span className="badge badge-xs badge-primary indicator-item">1</span>
-                </button>
-                <ul 
-                  tabIndex={0} 
-                  className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-64 border border-base-300"
-                  role="menu"
-                  aria-label="Notifications menu"
-                >
-                  <li className="menu-title">
-                    <span>Notifications</span>
-                  </li>
-                  <li role="none">
-                    <a role="menuitem" className="flex items-start gap-3 py-3">
-                      <div className="avatar placeholder">
-                        <div className="bg-info text-info-content rounded-full w-8 h-8">
-                          <span className="text-xs">💬</span>
-                        </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">New message from parent</p>
-                      </div>
-                    </a>
-                  </li>
-                  <li role="none">
-                    <Link href="/admin/messages" role="menuitem" className="text-sm text-primary">
-                      View all notifications →
-                    </Link>
-                  </li>
-                </ul>
-              </div>
+            <div className="flex-none flex items-center gap-3 px-3">
+              {/* Notification Bell */}
+              <NotificationBell />
 
               {/* User Menu */}
               <div className="dropdown dropdown-end">
                 <button 
                   tabIndex={0} 
-                  className="btn btn-ghost btn-circle avatar"
-                  aria-label={`User menu for ${user?.email || 'admin'}`}
+                  className="btn btn-ghost btn-circle avatar hover:scale-110 transition-transform duration-200 group"
+                  aria-label={`User menu for ${user?.firstName || user?.email || 'admin'}`}
                   aria-haspopup="true"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center ring-1 ring-primary ring-offset-1 ring-offset-base-100">
-                    <span className="text-sm font-bold">
-                      {user?.email?.charAt(0).toUpperCase() || 'A'}
-                    </span>
+                  <div className="w-12 h-12 rounded-full overflow-hidden gradient-primary text-primary-content flex items-center justify-center ring-2 ring-primary ring-offset-2 ring-offset-base-100 shadow-xl group-hover:shadow-2xl transition-all duration-300">
+                    {profilePicture ? (
+                      <img 
+                        src={profilePicture} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-lg font-bold">
+                        {user?.displayName?.charAt(0).toUpperCase() || user?.firstName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'A'}
+                      </span>
+                    )}
                   </div>
                 </button>
                 <ul 
                   tabIndex={0} 
-                  className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-base-100 rounded-box w-52 border border-base-300"
+                  className="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-2xl bg-gradient-to-br from-base-100 to-base-200 rounded-xl w-64 border border-base-300 backdrop-blur-sm"
                   role="menu"
                   aria-label="User account menu"
                 >
-                  <li className="menu-title">
-                    <span className="truncate">{user?.email}</span>
+                  <li className="menu-title mb-2">
+                    <div className="flex flex-col items-start gap-1 p-2 bg-base-200/50 rounded-lg border border-base-300">
+                      <span className="text-sm font-bold text-base-content truncate w-full">
+                        {user?.displayName || (user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName) || 'Admin User'}
+                      </span>
+                      <span className="text-xs text-base-content/70 truncate w-full">{user?.email}</span>
+                    </div>
                   </li>
-                  <li role="none">
-                    <Link href="/admin/account" role="menuitem" className="flex items-center gap-2">
-                      <span>👤</span>
-                      <span>Profile</span>
+                  <li role="none" className="my-1">
+                    <Link href="/admin/account" role="menuitem" className="flex items-center gap-3 p-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-200">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="text-primary text-sm">👤</span>
+                      </div>
+                      <span className="font-medium">Profile</span>
                     </Link>
                   </li>
-                  <li role="none">
-                    <Link href="/admin/settings" role="menuitem" className="flex items-center gap-2">
-                      <span>⚙️</span>
-                      <span>Settings</span>
+                  <li role="none" className="my-1">
+                    <Link href="/admin/settings" role="menuitem" className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/10 hover:text-secondary transition-all duration-200">
+                      <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center">
+                        <span className="text-secondary text-sm">⚙️</span>
+                      </div>
+                      <span className="font-medium">Settings</span>
                     </Link>
                   </li>
-                  <li role="none">
-                    <Link href="/admin/help" role="menuitem" className="flex items-center gap-2">
-                      <span>❓</span>
-                      <span>Help</span>
+                  <li role="none" className="my-1">
+                    <Link href="/admin/help" role="menuitem" className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/10 hover:text-accent transition-all duration-200">
+                      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center">
+                        <span className="text-accent text-sm">❓</span>
+                      </div>
+                      <span className="font-medium">Help</span>
                     </Link>
                   </li>
-                  <div className="divider my-1"></div>
+                  <div className="divider my-2"></div>
                   <li role="none">
-                    <button onClick={handleLogout} role="menuitem" className="text-error flex items-center gap-2">
-                      <span>🚪</span>
-                      <span>Logout</span>
+                    <button 
+                      onClick={handleLogout} 
+                      role="menuitem" 
+                      className="text-error flex items-center gap-3 p-3 rounded-lg hover:bg-error/10 transition-all duration-200 w-full"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-error/20 flex items-center justify-center">
+                        <span className="text-error text-sm">🚪</span>
+                      </div>
+                      <span className="font-medium">Logout</span>
                     </button>
                   </li>
                 </ul>
@@ -252,10 +250,7 @@ const AdminDashboardLayout = ({ children }) => {
                 <Breadcrumbs className="text-sm" />
               </div>
               
-              {/* Mobile Search */}
-              <div className="sm:hidden">
-                <SearchSystem className="w-60" onChildClick={handleChildClick} />
-              </div>
+              
             </div>
           </div>
 

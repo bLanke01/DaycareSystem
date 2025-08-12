@@ -1,6 +1,5 @@
 "use client";
 
-// Tony, this is your invoice page in admin dashboard. i commented my part below. for css, we are planning to use tailwind through daisyUI so please use that if you can but if not, just do basic css at the moment then maybe we'll fix it later. if you are planning to make any changes on other files, please add a comment so we know whats happening and also to prevent conflict when merging later.
 
 import React, { useEffect, useState } from "react";
 import {

@@ -22,28 +22,10 @@ const ParentSidebar = ({ isOpen, onClose }) => {
       description: 'View your child\'s overview and recent activities'
     },
     { 
-      icon: '📝', 
-      label: 'Activity Log', 
-      path: '/parent/activity-log',
-      description: 'View detailed activity logs and development tracking'
-    },
-    { 
       icon: '📅', 
       label: 'Schedules', 
       path: '/parent/schedules',
       description: 'View your child\'s daily schedule and events'
-    },
-    { 
-      icon: '🍽️', 
-      label: 'Meals', 
-      path: '/parent/meals',
-      description: 'Track your child\'s meal consumption'
-    },
-    { 
-      icon: '✓', 
-      label: 'Attendance', 
-      path: '/parent/attendance',
-      description: 'View attendance records and check-in times'
     },
     { 
       icon: '💬', 
@@ -51,9 +33,6 @@ const ParentSidebar = ({ isOpen, onClose }) => {
       path: '/parent/messages',
       description: 'Communicate with teachers and staff'
     },
-  ];
-
-  const managementItems = [
     { 
       icon: '👥', 
       label: 'Manage Children', 
@@ -246,43 +225,12 @@ const ParentSidebar = ({ isOpen, onClose }) => {
               id="main-menu-heading"
               className="px-3 text-xs font-semibold text-base-content/50 uppercase tracking-wider mb-3"
             >
-              Child Information
+              Main Menu
             </h3>
             {renderMenuItems(menuItems, 'main-menu')}
           </div>
           
-          {/* Management Section - Collapsible */}
-          <div className="mb-6">
-            <button
-              className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-base-content/50 uppercase tracking-wider hover:text-base-content transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
-              onClick={() => toggleGroup('management')}
-              aria-expanded={expandedGroups.management || false}
-              aria-controls="management-menu"
-              onKeyDown={(e) => handleKeyDown(e, () => toggleGroup('management'))}
-            >
-              <span id="management-heading">Account Management</span>
-              <svg 
-                className={`w-4 h-4 transition-transform ${expandedGroups.management ? 'rotate-90' : ''}`}
-                fill="currentColor" 
-                viewBox="0 0 20 20"
-                aria-hidden="true"
-              >
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-              </svg>
-            </button>
-            
-            <div 
-              id="management-menu"
-              className={`mt-2 transition-all duration-200 ${
-                expandedGroups.management ? 'opacity-100 max-h-96' : 'opacity-0 max-h-0 overflow-hidden'
-              }`}
-              aria-hidden={!expandedGroups.management}
-            >
-              {renderMenuItems(managementItems, 'management')}
-            </div>
-          </div>
-          
-          {/* Other Section */}
+          {/* Support Section */}
           <div className="mb-6">
             <h3 
               id="other-menu-heading"
