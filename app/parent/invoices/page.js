@@ -5,9 +5,20 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebase/config";
 import { getAuth } from "firebase/auth";
 
-function StatusBadge({ status }) {
+// Update the StatusBadge component to handle overdue status
+function StatusBadge({ status, isOverdue = false }) {
+  // If invoice is overdue and unpaid, show "overdue" instead of "unpaid"
+  const displayStatus = isOverdue && status === "unpaid" ? "overdue" : status;
+
   const color =
-    status === "paid" ? "#4caf50" : status === "unpaid" ? "#ff9800" : "#bdbdbd";
+    displayStatus === "paid"
+      ? "#4caf50"
+      : displayStatus === "unpaid"
+      ? "#ff9800"
+      : displayStatus === "overdue"
+      ? "#f44336"
+      : "#bdbdbd"; // Red for overdue
+
   return (
     <span
       style={{
@@ -22,7 +33,7 @@ function StatusBadge({ status }) {
         textAlign: "center",
       }}
     >
-      {status}
+      {displayStatus}
     </span>
   );
 }
@@ -34,6 +45,13 @@ export default function ParentInvoicesPage() {
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
   const [statusFilter, setStatusFilter] = useState("All");
+
+  // Move this function BEFORE the filteredInvoices logic
+  const isOverdue = (invoice) => {
+    if (invoice.status === "paid") return false;
+    const today = new Date().toISOString().split("T")[0];
+    return invoice.dueDate < today;
+  };
 
   useEffect(() => {
     const auth = getAuth();
@@ -67,11 +85,13 @@ export default function ParentInvoicesPage() {
     return () => unsubscribe();
   }, []);
 
-  // Filter and sort
+  // Filter and sort - now isOverdue is available
   const filteredInvoices = invoices
-    .filter((inv) =>
-      statusFilter === "All" ? true : inv.status === statusFilter
-    )
+    .filter((inv) => {
+      if (statusFilter === "All") return true;
+      if (statusFilter === "overdue") return isOverdue(inv);
+      return inv.status === statusFilter;
+    })
     .filter((inv) => {
       const q = search.trim().toLowerCase();
       if (!q) return true;
@@ -182,6 +202,7 @@ export default function ParentInvoicesPage() {
             <option value="All">All</option>
             <option value="paid">Paid</option>
             <option value="unpaid">Unpaid</option>
+            <option value="overdue">Overdue</option>
           </select>
         </label>
         <input
@@ -204,76 +225,147 @@ export default function ParentInvoicesPage() {
         />
       </div>
       {loading ? (
-        <p>Loading...</p>
+        <div style={{ textAlign: "center", padding: "2rem", color: "#666" }}>
+          <div style={{ fontSize: "1.1em", marginBottom: "0.5rem" }}>
+            Loading your invoices...
+          </div>
+          <div style={{ fontSize: "0.9em" }}>
+            Please wait while we fetch your billing information.
+          </div>
+        </div>
       ) : filteredInvoices.length === 0 ? (
-        <p>No invoices found.</p>
-      ) : (
-        <table
-          border="1"
-          cellPadding="8"
+        <div
           style={{
-            width: "100%",
-            marginTop: "1rem",
-            borderCollapse: "separate",
-            borderSpacing: "0 10px",
-            background: "#fff",
-            boxShadow: "0 2px 12px rgba(0,0,0,0.08)", // Subtle table shadow
-            borderRadius: "10px",
-            overflow: "hidden",
-            tableLayout: "fixed", // <-- Add this for even column widths
+            textAlign: "center",
+            padding: "3rem 1rem",
+            background: "#f8f9fa",
+            borderRadius: "8px",
+            border: "1px solid #e9ecef",
           }}
         >
-          <colgroup>
-            <col style={{ width: "25%" }} />
-            <col style={{ width: "25%" }} />
-            <col style={{ width: "25%" }} />
-            <col style={{ width: "25%" }} />
-          </colgroup>
-          <thead>
-            <tr>
-              <th style={{ textAlign: "center" }}>Invoice No</th>
-              <th style={{ textAlign: "center" }}>Due Date</th>
-              <th style={{ textAlign: "center" }}>Total</th>
-              <th style={{ textAlign: "center" }}>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredInvoices.map((invoice) => (
-              <tr
-                key={invoice.id}
+          {invoices.length === 0 ? (
+            <>
+              <div
                 style={{
-                  background: "#fafbfc",
-                  borderRadius: 8,
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.06)", // Subtle row shadow
-                  transition: "background 0.2s, box-shadow 0.2s",
-                  cursor: "pointer",
+                  fontSize: "1.2em",
+                  fontWeight: 600,
+                  marginBottom: "0.5rem",
+                  color: "#495057",
                 }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "#f0f6ff")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "#fafbfc")
-                }
-                onClick={() => setModalInvoice(invoice)} // Open modal on row click
               >
-                <td style={{ textAlign: "center" }}>{invoice.invoiceNo}</td>
-                <td style={{ textAlign: "center" }}>{invoice.dueDate}</td>
-                <td style={{ textAlign: "center" }}>
-                  $
-                  {(Array.isArray(invoice.items) ? invoice.items : []).reduce(
-                    (sum, item) =>
-                      sum +
-                      Number(item.amount ?? 0) * Number(item.quantity ?? 0),
-                    0
-                  )}
-                </td>
-                <td style={{ textAlign: "center" }}>
-                  <StatusBadge status={invoice.status} />
-                </td>
+                No invoices yet
+              </div>
+              <div style={{ color: "#6c757d" }}>
+                Your invoices will appear here when they're created by the
+                daycare.
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  fontSize: "1.2em",
+                  fontWeight: 600,
+                  marginBottom: "0.5rem",
+                  color: "#495057",
+                }}
+              >
+                No matching invoices
+              </div>
+              <div style={{ color: "#6c757d" }}>
+                Try adjusting your search or filter criteria.
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          <div
+            style={{
+              marginBottom: "1rem",
+              color: "#666",
+              fontSize: "0.9em",
+              textAlign: "right",
+            }}
+          >
+            Showing {filteredInvoices.length} of {invoices.length} invoice
+            {invoices.length !== 1 ? "s" : ""}
+          </div>
+          <table
+            border="1"
+            cellPadding="8"
+            style={{
+              width: "100%",
+              marginTop: "1rem",
+              borderCollapse: "separate",
+              borderSpacing: "0 10px",
+              background: "#fff",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.08)", // Subtle table shadow
+              borderRadius: "10px",
+              overflow: "hidden",
+              tableLayout: "fixed", // <-- Add this for even column widths
+            }}
+          >
+            <colgroup>
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "25%" }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "center" }}>Invoice No</th>
+                <th style={{ textAlign: "center" }}>Due Date</th>
+                <th style={{ textAlign: "center" }}>Total</th>
+                <th style={{ textAlign: "center" }}>Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredInvoices.map((invoice) => (
+                <tr
+                  key={invoice.id}
+                  style={{
+                    background: isOverdue(invoice) ? "#fff5f5" : "#fafbfc", // Light red for overdue
+                    borderRadius: 8,
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.06)", // Subtle row shadow
+                    transition: "background 0.2s, box-shadow 0.2s",
+                    cursor: "pointer",
+                    border: isOverdue(invoice) ? "1px solid #feb2b2" : "none", // Red border for overdue
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = isOverdue(invoice)
+                      ? "#fef5f5"
+                      : "#f0f6ff")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = isOverdue(invoice)
+                      ? "#fff5f5"
+                      : "#fafbfc")
+                  }
+                  onClick={() => setModalInvoice(invoice)} // Open modal on row click
+                >
+                  <td style={{ textAlign: "center" }}>{invoice.invoiceNo}</td>
+                  <td style={{ textAlign: "center" }}>{invoice.dueDate}</td>
+                  <td style={{ textAlign: "center" }}>
+                    $
+                    {(Array.isArray(invoice.items) ? invoice.items : []).reduce(
+                      (sum, item) =>
+                        sum +
+                        Number(item.amount ?? 0) * Number(item.quantity ?? 0),
+                      0
+                    )}
+                  </td>
+                  <td style={{ textAlign: "center" }}>
+                    <StatusBadge
+                      status={invoice.status}
+                      isOverdue={isOverdue(invoice)}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
       {modalInvoice && (
         <div
@@ -374,7 +466,11 @@ export default function ParentInvoicesPage() {
                     <b>Due Date:</b> {modalInvoice.dueDate}
                   </div>
                   <div>
-                    <b>Status:</b> <StatusBadge status={modalInvoice.status} />
+                    <b>Status:</b>{" "}
+                    <StatusBadge
+                      status={modalInvoice.status}
+                      isOverdue={isOverdue(modalInvoice)}
+                    />
                   </div>
                 </div>
               </div>
@@ -412,8 +508,8 @@ export default function ParentInvoicesPage() {
               >
                 <thead style={{ background: "#f5f5f5" }}>
                   <tr>
-                    <th style={{ textAlign: "center" }}>Item</th>
-                    <th style={{ textAlign: "center" }}>Description / Notes</th>
+                    <th style={{ textAlign: "center" }}>Charge</th>
+                    <th style={{ textAlign: "center" }}>Description</th>
                     <th style={{ textAlign: "center" }}>Unit Price</th>
                     <th style={{ textAlign: "center" }}>Qty</th>
                     <th style={{ textAlign: "center" }}>Subtotal</th>
@@ -423,24 +519,24 @@ export default function ParentInvoicesPage() {
                   {(Array.isArray(modalInvoice.items)
                     ? modalInvoice.items
                     : []
-                  ).map((item, idx) => {
-                    const amount = Number(item.amount ?? 0);
-                    const quantity = Number(item.quantity ?? 0);
-                    const itemTotal = amount * quantity;
+                  ).map((charge, idx) => {
+                    const amount = Number(charge.amount ?? 0);
+                    const quantity = Number(charge.quantity ?? 0);
+                    const chargeTotal = amount * quantity;
                     return (
                       <tr key={idx}>
                         <td style={{ textAlign: "center" }}>
-                          {item.description}
+                          {charge.description}
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          {item.notes || "-"}
+                          {charge.notes || "-"}
                         </td>
                         <td style={{ textAlign: "center" }}>
                           ${amount.toFixed(2)}
                         </td>
                         <td style={{ textAlign: "center" }}>{quantity}</td>
                         <td style={{ textAlign: "center" }}>
-                          ${itemTotal.toFixed(2)}
+                          ${chargeTotal.toFixed(2)}
                         </td>
                       </tr>
                     );
