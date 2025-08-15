@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';  
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../firebase/auth-context';
@@ -208,12 +209,12 @@ const AdminDashboardLayout = ({ children }) => {
                       <span className="font-medium">Profile</span>
                     </Link>
                   </li>
-                  <li role="none" className="my-1">
-                    <Link href="/admin/settings" role="menuitem" className="flex items-center gap-3 p-3 rounded-lg hover:bg-secondary/10 hover:text-secondary transition-all duration-200">
-                      <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center">
-                        <span className="text-secondary text-sm">⚙️</span>
-                      </div>
-                      <span className="font-medium">Settings</span>
+                  <li role="none">
+                    <Link href="/admin/settings" role="menuitem" className="flex items-center gap-2">
+                      <span>
+                        <Image src="/Emojis/Teddy_bear-Photoroom.png" alt="Teddy Bear Emoji" width={30} height={30} className="inline-block align-middle" /></span>
+                      <span>Settings</span>
+
                     </Link>
                   </li>
                   <li role="none" className="my-1">

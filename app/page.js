@@ -85,38 +85,38 @@ export default function Home() {
           
           <div className="lg:w-1/2 text-center lg:text-left">
             <div className="inline-block mb-4">
-              <span className="text-2xl">🌟</span>
+              <span className="text-2xl"><Image src="/Emojis/Star_emoji-Photoroom.png" alt="Star Emoji" width={60} height={60} /></span>
               <span className="badge badge-primary badge-lg ml-2">Spring Enrollment Open!</span>
             </div>
             <h1 className="text-6xl font-bold text-primary mb-4">
               Welcome to 
               <span className="text-secondary"> TinyLog </span>
               Where Little Dreams Come to Life! 
-              <span className="text-4xl">🌈</span>
+              <span className="text-4xl"><Image src="/Emojis/Rainbow_emoji-Photoroom.png" alt="Rainbow Emoji" width={60} height={60} /></span>
             </h1>
                           <p className="py-6 text-xl text-base-content leading-relaxed">
               Give your child the perfect start with our nurturing daycare! TinyLog provides a safe, 
               fun, and educational environment where children ages 6 months to 12 years can 
               grow, learn, and make lasting friendships. 
-              <span className="font-semibold text-primary">✨ Every day is an adventure!</span>
+              <span className="font-semibold text-primary"><Image src="/Emojis/Star_emoji-Photoroom.png" alt="Star Emoji" width={30} height={30} /> Every day is an adventure!</span>
             </p>
             
             {/* Key Features */}
             <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="flex items-center space-x-2">
-                <span className="text-2xl">👶</span>
+                <span className="text-2xl"><Image src="/Emojis/Baby_emoji-Photoroom.png" alt="Baby Emoji" width={40} height={40} /></span>
                 <span className="font-medium">Ages 6mo - 12yr</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-2xl">🏫</span>
+                <span className="text-2xl"><Image src="/Emojis/School_emoji-Photoroom.png" alt="School Emoji" width={40} height={40} /></span>
                 <span className="font-medium">Licensed & Insured</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-2xl">🍎</span>
+                <span className="text-2xl"><Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={40} height={40} /></span>
                 <span className="font-medium">Healthy Meals</span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-2xl">📚</span>
+                <span className="text-2xl"><Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={40} height={40} /></span>
                 <span className="font-medium">Learning Programs</span>
               </div>
             </div>
@@ -124,7 +124,7 @@ export default function Home() {
             <div className="flex gap-4 flex-wrap justify-center lg:justify-start">
               <Link href="/program">
                 <button className="btn btn-primary btn-lg">
-                  <span className="text-xl mr-2">🎯</span>
+                  <span className="text-xl mr-2"><Image src="/Emojis/Enroll_emoji-Photoroom.png" alt="Enroll Emoji" width={24} height={24} /></span>
                   Enroll Today!
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
@@ -133,7 +133,7 @@ export default function Home() {
               </Link>
               <Link href="/contact">
                 <button className="btn btn-secondary btn-lg">
-                  <span className="text-xl mr-2">🏠</span>
+                  <span className="text-xl mr-2"><Image src="/Emojis/School_emoji-Photoroom.png" alt="School Emoji" width={24} height={24} /></span>
                   Schedule Tour
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -151,7 +151,10 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
-              Why Families Love TinyLog! <span className="text-4xl">💕</span>
+              Why Families Love TinyLog! 
+              <span className="text-4xl">
+                <Image src="/Emojis/Heart_emoji-Photoroom.png" alt="Heart Emoji" width={30} height={30} className="inline-block align-middle" />
+              </span>
             </h2>
             <p className="text-xl text-base-content max-w-3xl mx-auto">
               We're more than just a daycare - we're a second home where your child's 
@@ -163,7 +166,7 @@ export default function Home() {
             {/* Feature Card 1 */}
             <div className="card bg-gradient-to-br from-secondary/15 to-accent/10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
-                <div className="text-6xl mb-4">🎨</div>
+                <div className="text-6xl mb-4"><Image src="/Emojis/art_emoji-Photoroom.png" alt="Art Emoji" width={60} height={60} className="inline-block align-middle" /></div>
                 <h3 className="card-title text-primary justify-center text-xl">Creative Learning</h3>
                 <p className="text-base-content">Art, music, and hands-on activities that spark imagination and creativity in every child.</p>
               </div>
@@ -172,7 +175,7 @@ export default function Home() {
             {/* Feature Card 2 */}
             <div className="card bg-gradient-to-br from-primary/10 to-neutral/15 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
-                <div className="text-6xl mb-4">🛡️</div>
+                <div className="text-6xl mb-4"><Image src="/Emojis/Security_emoji-Photoroom.png" alt="Security Emoji" width={60} height={60} className="inline-block align-middle" /></div>
                 <h3 className="card-title text-primary justify-center text-xl">Safe & Secure</h3>
                 <p className="text-base-content">State-of-the-art security, trained staff, and child-proofed facilities for complete peace of mind.</p>
               </div>
@@ -181,7 +184,7 @@ export default function Home() {
             {/* Feature Card 3 */}
             <div className="card bg-gradient-to-br from-accent/12 to-primary/8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
-                <div className="text-6xl mb-4">🍎</div>
+                <div className="text-6xl mb-4"><Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={70} height={70} className="inline-block align-middle" /></div>
                 <h3 className="card-title text-primary justify-center text-xl">Healthy Nutrition</h3>
                 <p className="text-base-content">Fresh, nutritious meals and snacks prepared daily to fuel growing minds and bodies.</p>
               </div>
@@ -190,7 +193,7 @@ export default function Home() {
             {/* Feature Card 4 */}
             <div className="card bg-gradient-to-br from-neutral/12 to-secondary/10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
               <div className="card-body text-center">
-                <div className="text-6xl mb-4">👥</div>
+                <div className="text-6xl mb-4"><Image src="/Emojis/Staff_emoji-Photoroom.png" alt="Staff Emoji" width={70} height={70} className="inline-block align-middle" /></div>
                 <h3 className="card-title text-primary justify-center text-xl">Professional Staff</h3>
                 <p className="text-base-content">Certified early childhood educators who truly care about your child's growth and happiness.</p>
               </div>
@@ -203,7 +206,7 @@ export default function Home() {
       <div className="py-20 bg-gradient-to-r from-primary to-secondary text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-5xl font-bold mb-6">
-            Ready to Join the TinyLog Family? <span className="text-4xl">🤗</span>
+            Ready to Join the TinyLog Family? <span className="text-4xl"><Image src="/Emojis/Happy_emoji-Photoroom.png" alt="Happy Emoji" width={60} height={60} className="inline-block align-middle" /></span>
           </h2>
           <p className="text-2xl mb-8 opacity-90">
             Spaces are limited! Secure your child's spot in our loving TinyLog community today.
@@ -211,13 +214,13 @@ export default function Home() {
           <div className="flex gap-6 justify-center flex-wrap">
             <Link href="/auth/signup">
               <button className="btn btn-accent btn-lg text-lg px-8">
-                <span className="text-2xl mr-2">🚀</span>
+                <span className="text-2xl mr-2"><Image src="/Emojis/Sign_emoji-Photoroom.png" alt="Sign Emoji" width={30} height={30} className="inline-block align-middle" /></span>
                 Get Started Now
               </button>
             </Link>
             <Link href="/contact">
               <button className="btn btn-outline btn-lg text-lg px-8 text-primary-content border-primary-content hover:bg-primary-content hover:text-primary">
-                <span className="text-2xl mr-2">📞</span>
+                <span className="text-2xl mr-2"><Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={30} height={30} className="inline-block align-middle" /></span>
                 Call Us Today
               </button>
             </Link>
