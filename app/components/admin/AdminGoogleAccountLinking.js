@@ -6,7 +6,7 @@ import {
   GoogleAuthProvider, 
   linkWithPopup, 
   unlink, 
-  getAuth, 
+  onAuthStateChanged,
   fetchSignInMethodsForEmail 
 } from 'firebase/auth';
 import { auth } from '../../firebase/config';
@@ -19,20 +19,32 @@ const AdminGoogleAccountLinking = () => {
   const [showConfirmUnlink, setShowConfirmUnlink] = useState(false);
 
   useEffect(() => {
-    checkGoogleLinkStatus();
-  }, []);
-
-  const checkGoogleLinkStatus = async () => {
-    try {
-      const user = auth.currentUser;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        setError('No user is currently signed in');
+        setIsLinked(false);
         setLoading(false);
         return;
       }
+      await checkGoogleLinkStatus(user);
+    });
+    return () => unsubscribe();
+  }, []);
 
-      const providers = await fetchSignInMethodsForEmail(auth, user.email);
-      setIsLinked(providers.includes('google.com'));
+  const checkGoogleLinkStatus = async (user) => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Prefer providerData for current state
+      const providerIds = (user.providerData || []).map(p => p.providerId);
+      if (providerIds.includes('google.com')) {
+        setIsLinked(true);
+      } else if (user.email) {
+        // Fallback: query sign-in methods for the email
+        const methods = await fetchSignInMethodsForEmail(auth, user.email);
+        setIsLinked(methods.includes('google.com'));
+      } else {
+        setIsLinked(false);
+      }
     } catch (error) {
       console.error('Error checking Google link status:', error);
       setError('Failed to check Google account status');
@@ -60,9 +72,9 @@ const AdminGoogleAccountLinking = () => {
     } catch (error) {
       console.error('Error linking Google account:', error);
       setError(
-        error.code === 'auth/credential-already-in-use'
+        error?.code === 'auth/credential-already-in-use'
           ? 'This Google account is already linked to another user'
-          : 'Failed to link Google account'
+          : error?.message || 'Failed to link Google account'
       );
     } finally {
       setLoading(false);
@@ -86,7 +98,7 @@ const AdminGoogleAccountLinking = () => {
       setShowConfirmUnlink(false);
     } catch (error) {
       console.error('Error unlinking Google account:', error);
-      setError('Failed to unlink Google account');
+      setError(error?.message || 'Failed to unlink Google account');
     } finally {
       setLoading(false);
     }
@@ -135,7 +147,6 @@ const AdminGoogleAccountLinking = () => {
               <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
               <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
             </svg>
-            
           </div>
           <div>
             <h4 className="font-medium">Google Account</h4>
@@ -186,8 +197,7 @@ const AdminGoogleAccountLinking = () => {
       <div className="text-sm text-base-content/70">
         {isLinked ? (
           <p>
-            ℹ️ Unlinking your Google account will remove the ability to sign in with Google.
-            You will still be able to sign in with your email and password.
+            ℹ️ Your Google account is linked. You can sign in using Google.
           </p>
         ) : (
           <p>

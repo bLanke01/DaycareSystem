@@ -107,19 +107,18 @@ const Header = () => {
       
       {/* Desktop Navigation */}
       <div className="navbar-center hidden lg:flex">
-        <ul className="menu menu-horizontal px-1 space-x-2">
+        <div className="flex items-center space-x-6">
           {navItems.map((item) => (
-            <li key={item.href}>
-              <Link 
-                href={item.href} 
-                className="flex items-center space-x-2 hover:bg-primary/10 rounded-xl px-4 py-2 transition-all duration-200 group"
-              >
-                <span className="text-xl group-hover:scale-110 transition-transform duration-200">{item.emoji}</span>
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            </li>
+            <Link 
+              key={item.href}
+              href={item.href} 
+              className="flex items-center space-x-2 hover:bg-primary/10 rounded-xl px-4 py-2 transition-all duration-200 group"
+            >
+              <span className="text-xl group-hover:scale-110 transition-transform duration-200">{item.emoji}</span>
+              <span className="font-medium">{item.label}</span>
+            </Link>
           ))}
-        </ul>
+        </div>
       </div>
       
       {/* Desktop Auth Buttons */}

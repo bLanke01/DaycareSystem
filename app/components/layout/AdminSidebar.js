@@ -188,13 +188,11 @@ const AdminSidebar = ({ isOpen, onClose }) => {
             aria-describedby={`${item.path.replace(/\//g, '-')}-desc`}
             onClick={() => onClose && onClose()}
           >
-            <span className="text-xl" aria-hidden="true">{item.icon}</span>
-            <div className="flex flex-col items-start">
-              <span className="font-medium">{item.label}</span>
-              <span className="sr-only" id={`${item.path.replace(/\//g, '-')}-desc`}>
-                {item.description}
-              </span>
-            </div>
+            <span className="text-xl flex-shrink-0" aria-hidden="true">{item.icon}</span>
+            <span className="font-medium flex-1">{item.label}</span>
+            <span className="sr-only" id={`${item.path.replace(/\//g, '-')}-desc`}>
+              {item.description}
+            </span>
           </Link>
         </li>
       ))}

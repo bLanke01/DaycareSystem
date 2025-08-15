@@ -25,6 +25,8 @@ const SignupForm = () => {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [debugInfo, setDebugInfo] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -225,7 +227,7 @@ const SignupForm = () => {
   
   if (userType === 'admin') {
       return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-base-200">
       <div className="card w-full max-w-md bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="tabs tabs-boxed justify-center mb-6">
@@ -256,7 +258,7 @@ const SignupForm = () => {
   }
   
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-base-200">
       <div className="card w-full max-w-2xl bg-base-100 shadow-xl">
         <div className="card-body">
           <div className="tabs tabs-boxed justify-center mb-6">
@@ -385,7 +387,7 @@ const SignupForm = () => {
                   <span className="label-text">Password</span>
                 </label>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
@@ -395,6 +397,15 @@ const SignupForm = () => {
                   minLength="6"
                   placeholder="Create a secure password"
                 />
+                <label className="label">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm mr-1"
+                    checked={showPassword}
+                    onChange={() => setShowPassword(!showPassword)}
+                  />
+                  Show password
+                </label>
               </div>
               
               <div className="form-control">
@@ -402,7 +413,7 @@ const SignupForm = () => {
                   <span className="label-text">Confirm Password</span>
                 </label>
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
@@ -411,6 +422,15 @@ const SignupForm = () => {
                   disabled={loading}
                   placeholder="Confirm your password"
                 />
+                <label className="label">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm mr-1"
+                    checked={showConfirmPassword}
+                    onChange={() => setShowConfirmPassword(!showConfirmPassword)}
+                  />
+                  Show password
+                </label>
               </div>
               
               <button 

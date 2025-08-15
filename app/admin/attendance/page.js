@@ -155,8 +155,8 @@ export default function AttendancePage() {
         {/* Filter Controls */}
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="form-control flex-1">
+            <div className="admin-form-grid">
+              <div className="admin-form-control">
                 <label className="label">
                   <span className="label-text">Age Group</span>
                 </label>
@@ -172,7 +172,7 @@ export default function AttendancePage() {
                 </select>
               </div>
               
-              <div className="form-control flex-1">
+              <div className="admin-form-control">
                 <label className="label">
                   <span className="label-text">Date</span>
                 </label>
@@ -184,7 +184,7 @@ export default function AttendancePage() {
                 />
               </div>
               
-              <div className="form-control flex-1">
+              <div className="admin-form-control">
                 <label className="label">
                   <span className="label-text">Actions</span>
                 </label>

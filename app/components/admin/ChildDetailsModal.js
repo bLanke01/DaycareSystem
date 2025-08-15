@@ -2,152 +2,66 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { doc, updateDoc, collection, addDoc, query, where, getDocs, onSnapshot, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 
-const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
+const ChildDetailsModal = ({ child, onClose, onAddSibling }) => {
   const [childData, setChildData] = useState(child);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activities, setActivities] = useState([]);
-  const [attendance, setAttendance] = useState([]);
-  const [meals, setMeals] = useState([]);
-  const [naps, setNaps] = useState([]);
+  const [editing, setEditing] = useState(false);
+  const [siblings, setSiblings] = useState([]);
+  const [loadingSiblings, setLoadingSiblings] = useState(false);
 
-  // Real-time listeners for child's data
+  // Fetch siblings when component mounts
   useEffect(() => {
-    if (!child.id) return;
+    if (childData.parentId) {
+      fetchSiblings();
+    }
+  }, [childData.parentId]);
 
-    const unsubscribes = [];
-    let isMounted = true;
-
-    // Listen to activities - remove orderBy to avoid composite index requirement
-    const activitiesQuery = query(
-      collection(db, 'activities'),
-      where('childId', '==', child.id)
-    );
+  // Fetch siblings from the same parent
+  const fetchSiblings = async () => {
+    if (!childData.parentId) return;
     
-    unsubscribes.push(
-      onSnapshot(activitiesQuery, (snapshot) => {
-        if (!isMounted) return;
-        const activitiesData = [];
-        snapshot.forEach(doc => {
-          activitiesData.push({ id: doc.id, ...doc.data() });
-        });
-        // Sort by date on client side
-        activitiesData.sort((a, b) => {
-          const dateA = new Date(a.date || a.createdAt || 0);
-          const dateB = new Date(b.date || b.createdAt || 0);
-          return dateB - dateA; // descending order
-        });
-        setActivities(activitiesData);
-      }, (error) => {
-        console.error('Error fetching activities:', error);
-        if (isMounted) setActivities([]);
-      })
-    );
-
-    // Listen to attendance - remove orderBy to avoid composite index requirement
-    const attendanceQuery = query(
-      collection(db, 'attendance'),
-      where('childId', '==', child.id)
-    );
-    
-    unsubscribes.push(
-      onSnapshot(attendanceQuery, (snapshot) => {
-        if (!isMounted) return;
-        const attendanceData = [];
-        snapshot.forEach(doc => {
-          attendanceData.push({ id: doc.id, ...doc.data() });
-        });
-        // Sort by date on client side
-        attendanceData.sort((a, b) => {
-          const dateA = new Date(a.date || a.createdAt || 0);
-          const dateB = new Date(b.date || b.createdAt || 0);
-          return dateB - dateA; // descending order
-        });
-        setAttendance(attendanceData);
-      }, (error) => {
-        console.error('Error fetching attendance:', error);
-        if (isMounted) setAttendance([]);
-      })
-    );
-
-    // Listen to meals - remove orderBy to avoid composite index requirement
-    const mealsQuery = query(
-      collection(db, 'childMeals'),
-      where('childId', '==', child.id)
-    );
-    
-    unsubscribes.push(
-      onSnapshot(mealsQuery, (snapshot) => {
-        if (!isMounted) return;
-        const mealsData = [];
-        snapshot.forEach(doc => {
-          mealsData.push({ id: doc.id, ...doc.data() });
-        });
-        // Sort by date on client side
-        mealsData.sort((a, b) => {
-          const dateA = new Date(a.date || a.createdAt || 0);
-          const dateB = new Date(b.date || b.createdAt || 0);
-          return dateB - dateA; // descending order
-        });
-        setMeals(mealsData);
-      }, (error) => {
-        console.error('Error fetching meals:', error);
-        if (isMounted) setMeals([]);
-      })
-    );
-
-    // Listen to naps - remove orderBy to avoid composite index requirement
-    const napsQuery = query(
-      collection(db, 'naps'),
-      where('childId', '==', child.id)
-    );
-    
-    unsubscribes.push(
-      onSnapshot(napsQuery, (snapshot) => {
-        if (!isMounted) return;
-        const napsData = [];
-        snapshot.forEach(doc => {
-          napsData.push({ id: doc.id, ...doc.data() });
-        });
-        // Sort by date on client side
-        napsData.sort((a, b) => {
-          const dateA = new Date(a.date || a.createdAt || 0);
-          const dateB = new Date(b.date || b.createdAt || 0);
-          return dateB - dateA; // descending order
-        });
-        setNaps(napsData);
-      }, (error) => {
-        console.error('Error fetching naps:', error);
-        if (isMounted) setNaps([]);
-      })
-    );
-
-    return () => {
-      isMounted = false;
-      unsubscribes.forEach(unsubscribe => {
-        if (unsubscribe) unsubscribe();
+    try {
+      setLoadingSiblings(true);
+      const siblingsQuery = query(
+        collection(db, 'children'),
+        where('parentId', '==', childData.parentId)
+      );
+      
+      const siblingsSnapshot = await getDocs(siblingsQuery);
+      const siblingsData = [];
+      
+      siblingsSnapshot.forEach(doc => {
+        const siblingData = doc.data();
+        if (doc.id !== childData.id) { // Exclude current child
+          siblingsData.push({ id: doc.id, ...siblingData });
+        }
       });
-    };
-  }, [child.id]);
+      
+      setSiblings(siblingsData);
+    } catch (error) {
+      console.error('Error fetching siblings:', error);
+    } finally {
+      setLoadingSiblings(false);
+    }
+  };
 
-  // Update child basic information
+  // Update child data
   const handleUpdateChild = async (updatedData) => {
     try {
       setLoading(true);
       setError('');
       
-      if (!child.id) {
-        throw new Error('Child ID is missing');
-      }
-
       await updateDoc(doc(db, 'children', child.id), {
         ...updatedData,
         updatedAt: new Date().toISOString()
       });
+      
       setChildData({ ...childData, ...updatedData });
+      setEditing(false);
     } catch (error) {
       console.error('Error updating child:', error);
       setError('Failed to update child information');
@@ -156,119 +70,7 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
     }
   };
 
-  // Add new activity
-  const handleAddActivity = async (activityData) => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      if (!child.id) {
-        throw new Error('Child ID is missing');
-      }
-
-      await addDoc(collection(db, 'activities'), {
-        childId: child.id,
-        childName: `${child.firstName} ${child.lastName}`,
-        ...activityData,
-        createdAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error adding activity:', error);
-      setError('Failed to add activity');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Mark attendance
-  const handleMarkAttendance = async (attendanceData) => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      if (!child.id) {
-        throw new Error('Child ID is missing');
-      }
-
-      const today = new Date().toISOString().split('T')[0];
-      
-      // Check if attendance already exists for today
-      const existingAttendance = attendance.find(att => 
-        att.date && att.date.split('T')[0] === today
-      );
-
-      if (existingAttendance) {
-        await updateDoc(doc(db, 'attendance', existingAttendance.id), {
-          ...attendanceData,
-          updatedAt: new Date().toISOString()
-        });
-      } else {
-        await addDoc(collection(db, 'attendance'), {
-          childId: child.id,
-          childName: `${child.firstName} ${child.lastName}`,
-          date: new Date().toISOString(),
-          ...attendanceData,
-          createdAt: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error('Error marking attendance:', error);
-      setError('Failed to mark attendance');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Record meal
-  const handleRecordMeal = async (mealData) => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      if (!child.id) {
-        throw new Error('Child ID is missing');
-      }
-
-      await addDoc(collection(db, 'childMeals'), {
-        childId: child.id,
-        childName: `${child.firstName} ${child.lastName}`,
-        date: new Date().toISOString(),
-        ...mealData,
-        createdAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error recording meal:', error);
-      setError('Failed to record meal');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Record nap
-  const handleRecordNap = async (napData) => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      if (!child.id) {
-        throw new Error('Child ID is missing');
-      }
-
-      await addDoc(collection(db, 'naps'), {
-        childId: child.id,
-        childName: `${child.firstName} ${child.lastName}`,
-        date: new Date().toISOString(),
-        ...napData,
-        createdAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error recording nap:', error);
-      setError('Failed to record nap');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Calculate age
   const calculateAge = (dateOfBirth) => {
     if (!dateOfBirth) return 'N/A';
     
@@ -291,857 +93,395 @@ const ChildDetailsModal = ({ child, activeTab, setActiveTab, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal extra-large-modal">
-        <div className="modal-header">
-          <h2>{childData.firstName} {childData.lastName} - Details</h2>
-          <button className="close-btn" onClick={onClose}>
-            &times;
-          </button>
-        </div>
-
-        {error && <div className="error-message">{error}</div>}
-
-        <div className="modal-tabs">
-          <button 
-            className={`modal-tab ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button 
-            className={`modal-tab ${activeTab === 'activities' ? 'active' : ''}`}
-            onClick={() => setActiveTab('activities')}
-          >
-            Activities
-          </button>
-          <button 
-            className={`modal-tab ${activeTab === 'attendance' ? 'active' : ''}`}
-            onClick={() => setActiveTab('attendance')}
-          >
-            Attendance
-          </button>
-          <button 
-            className={`modal-tab ${activeTab === 'meals' ? 'active' : ''}`}
-            onClick={() => setActiveTab('meals')}
-          >
-            Meals
-          </button>
-          <button 
-            className={`modal-tab ${activeTab === 'naps' ? 'active' : ''}`}
-            onClick={() => setActiveTab('naps')}
-          >
-            Nap Tracking
-          </button>
-        </div>
-
-        <div className="modal-content">
-          {activeTab === 'overview' && (
-            <OverviewTab 
-              child={childData} 
-              onUpdate={handleUpdateChild}
-              loading={loading}
-              calculateAge={calculateAge}
-            />
-          )}
-          
-          {activeTab === 'activities' && (
-            <ActivitiesTab 
-              activities={activities}
-              onAddActivity={handleAddActivity}
-              loading={loading}
-            />
-          )}
-          
-          {activeTab === 'attendance' && (
-            <AttendanceTab 
-              attendance={attendance}
-              onMarkAttendance={handleMarkAttendance}
-              loading={loading}
-            />
-          )}
-          
-          {activeTab === 'meals' && (
-            <MealsTab 
-              meals={meals}
-              onRecordMeal={handleRecordMeal}
-              loading={loading}
-            />
-          )}
-          
-          {activeTab === 'naps' && (
-            <NapsTab 
-              naps={naps}
-              onRecordNap={handleRecordNap}
-              loading={loading}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Overview Tab Component
-const OverviewTab = ({ child, onUpdate, loading, calculateAge }) => {
-  const [editing, setEditing] = useState(false);
-  const [editData, setEditData] = useState(child);
-
-  const handleSave = async () => {
-    await onUpdate(editData);
-    setEditing(false);
-  };
-
-  const handleCancel = () => {
-    setEditData(child);
-    setEditing(false);
-  };
-
-  return (
-    <div className="overview-tab">
-      <div className="child-overview-header">
-        <div className="child-avatar-large">
-          {child.gender === 'Female' ? '👧' : '👦'}
-        </div>
-        <div className="child-basic-details">
-          <h3>{child.firstName} {child.lastName}</h3>
-          <p>Age: {calculateAge(child.dateOfBirth)}</p>
-          <p>Group: {child.group}</p>
-          <p>Date of Birth: {child.dateOfBirth ? new Date(child.dateOfBirth).toLocaleDateString() : 'N/A'}</p>
-        </div>
-        <div className="overview-actions">
-          {!editing ? (
-            <button className="edit-btn" onClick={() => setEditing(true)}>
-              Edit Information
-            </button>
-          ) : (
-            <div className="edit-actions">
-              <button className="save-btn" onClick={handleSave} disabled={loading}>
-                {loading ? 'Saving...' : 'Save'}
-              </button>
-              <button className="cancel-btn" onClick={handleCancel}>
-                Cancel
-              </button>
+    <div className="modal modal-open">
+      <div className="modal-box max-w-6xl w-11/12 max-h-[90vh] overflow-y-auto bg-gradient-to-br from-base-100 to-base-200">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-base-300">
+          <div className="flex items-center gap-4">
+            <div className="text-6xl">
+              {childData.gender === 'Female' ? '👧' : childData.gender === 'Male' ? '👦' : '🧒'}
             </div>
-          )}
-        </div>
-      </div>
-
-      <div className="overview-details">
-        <div className="detail-section">
-          <h4>Basic Information</h4>
-          {editing ? (
-            <div className="edit-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label>First Name</label>
-                  <input
-                    type="text"
-                    value={editData.firstName || ''}
-                    onChange={(e) => setEditData({...editData, firstName: e.target.value})}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    type="text"
-                    value={editData.lastName || ''}
-                    onChange={(e) => setEditData({...editData, lastName: e.target.value})}
-                  />
-                </div>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Date of Birth</label>
-                  <input
-                    type="date"
-                    value={editData.dateOfBirth || ''}
-                    onChange={(e) => setEditData({...editData, dateOfBirth: e.target.value})}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Gender</label>
-                  <select
-                    value={editData.gender || ''}
-                    onChange={(e) => setEditData({...editData, gender: e.target.value})}
+            <div>
+              <h2 className="text-3xl font-bold text-primary">{childData.firstName} {childData.lastName}</h2>
+              <p className="text-lg text-base-content/70">Child Profile</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            {!editing ? (
+              <>
+                {childData.parentRegistered && onAddSibling && (
+                  <button 
+                    className="btn btn-secondary btn-lg gap-2" 
+                    onClick={() => onAddSibling(childData)}
                   >
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="detail-grid">
-              <div className="detail-item">
-                <span className="label">Full Name:</span>
-                <span className="value">{child.firstName} {child.lastName}</span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Date of Birth:</span>
-                <span className="value">{child.dateOfBirth ? new Date(child.dateOfBirth).toLocaleDateString() : 'Not specified'}</span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Gender:</span>
-                <span className="value">{child.gender || 'Not specified'}</span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Age:</span>
-                <span className="value">{calculateAge(child.dateOfBirth)}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="detail-section">
-          <h4>Parent Information</h4>
-          <div className="detail-grid">
-            <div className="detail-item">
-              <span className="label">Parent Name:</span>
-              <span className="value">{child.parentFirstName} {child.parentLastName}</span>
-            </div>
-            <div className="detail-item">
-              <span className="label">Email:</span>
-              <span className="value">{child.parentEmail}</span>
-            </div>
-            <div className="detail-item">
-              <span className="label">Phone:</span>
-              <span className="value">{child.parentPhone}</span>
-            </div>
-            <div className="detail-item">
-              <span className="label">Registration Status:</span>
-              <span className={`value status ${child.parentRegistered ? 'registered' : 'pending'}`}>
-                {child.parentRegistered ? 'Registered' : 'Pending Registration'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="detail-section">
-          <h4>Medical & Dietary Information</h4>
-          {editing ? (
-            <div className="edit-form">
-              <div className="form-group">
-                <label>Allergies (comma separated)</label>
-                <input
-                  type="text"
-                  value={Array.isArray(editData.allergies) ? editData.allergies.join(', ') : editData.allergies || ''}
-                  onChange={(e) => setEditData({
-                    ...editData, 
-                    allergies: e.target.value.split(',').map(a => a.trim()).filter(a => a)
-                  })}
-                />
-              </div>
-              <div className="form-group">
-                <label>Medical Conditions (comma separated)</label>
-                <input
-                  type="text"
-                  value={Array.isArray(editData.medicalConditions) ? editData.medicalConditions.join(', ') : editData.medicalConditions || ''}
-                  onChange={(e) => setEditData({
-                    ...editData, 
-                    medicalConditions: e.target.value.split(',').map(m => m.trim()).filter(m => m)
-                  })}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="detail-grid">
-              <div className="detail-item">
-                <span className="label">Allergies:</span>
-                <span className="value">
-                  {Array.isArray(child.allergies) && child.allergies.length > 0 
-                    ? child.allergies.join(', ') 
-                    : 'None'}
-                </span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Medical Conditions:</span>
-                <span className="value">
-                  {Array.isArray(child.medicalConditions) && child.medicalConditions.length > 0 
-                    ? child.medicalConditions.join(', ') 
-                    : 'None'}
-                </span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Emergency Contact:</span>
-                <span className="value">{child.emergencyContact || 'Not specified'}</span>
-              </div>
-              <div className="detail-item">
-                <span className="label">Emergency Phone:</span>
-                <span className="value">{child.emergencyPhone || 'Not specified'}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Activities Tab Component
-const ActivitiesTab = ({ activities, onAddActivity, loading }) => {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newActivity, setNewActivity] = useState({
-    type: 'Learning',
-    description: '',
-    notes: '',
-    date: new Date().toISOString().split('T')[0]
-  });
-
-  const activityTypes = [
-    'Learning', 'Art', 'Music', 'Physical', 'Social', 'Reading', 'Science', 'Other'
-  ];
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await onAddActivity(newActivity);
-    setNewActivity({
-      type: 'Learning',
-      description: '',
-      notes: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setShowAddForm(false);
-  };
-
-  return (
-    <div className="activities-tab">
-      <div className="tab-header">
-        <h3>Activity Log</h3>
-        <button 
-          className="add-btn"
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          {showAddForm ? 'Cancel' : 'Add Activity'}
-        </button>
-      </div>
-
-      {showAddForm && (
-        <div className="add-form">
-          <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Activity Type</label>
-                <select
-                  value={newActivity.type}
-                  onChange={(e) => setNewActivity({...newActivity, type: e.target.value})}
-                  required
-                >
-                  {activityTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Date</label>
-                <input
-                  type="date"
-                  value={newActivity.date}
-                  onChange={(e) => setNewActivity({...newActivity, date: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Description</label>
-              <textarea
-                value={newActivity.description}
-                onChange={(e) => setNewActivity({...newActivity, description: e.target.value})}
-                placeholder="Describe the activity..."
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Notes</label>
-              <textarea
-                value={newActivity.notes}
-                onChange={(e) => setNewActivity({...newActivity, notes: e.target.value})}
-                placeholder="Additional notes..."
-              />
-            </div>
-            <button type="submit" disabled={loading}>
-              {loading ? 'Adding...' : 'Add Activity'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="activities-list">
-        {activities.length === 0 ? (
-          <div className="no-data">No activities recorded yet.</div>
-        ) : (
-          activities.map(activity => (
-            <div key={activity.id} className="activity-card">
-              <div className="activity-header">
-                <span className={`activity-type ${activity.type?.toLowerCase() || 'other'}`}>
-                  {activity.type || 'Other'}
-                </span>
-                <span className="activity-date">
-                  {new Date(activity.date).toLocaleDateString()}
-                </span>
-              </div>
-              <div className="activity-content">
-                <p className="activity-description">{activity.description}</p>
-                {activity.notes && (
-                  <p className="activity-notes">Notes: {activity.notes}</p>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Sibling
+                  </button>
                 )}
-              </div>
-              <div className="activity-footer">
-                <span className="activity-time">
-                  Added: {new Date(activity.createdAt).toLocaleString()}
-                </span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Attendance Tab Component
-const AttendanceTab = ({ attendance, onMarkAttendance, loading }) => {
-  const [todayAttendance, setTodayAttendance] = useState({
-    status: 'present',
-    arrivalTime: '',
-    departureTime: '',
-    notes: ''
-  });
-
-  const today = new Date().toISOString().split('T')[0];
-  const todayRecord = attendance.find(att => att.date.split('T')[0] === today);
-
-  useEffect(() => {
-    if (todayRecord) {
-      setTodayAttendance({
-        status: todayRecord.status || 'present',
-        arrivalTime: todayRecord.arrivalTime || '',
-        departureTime: todayRecord.departureTime || '',
-        notes: todayRecord.notes || ''
-      });
-    }
-  }, [todayRecord]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await onMarkAttendance(todayAttendance);
-  };
-
-  return (
-    <div className="attendance-tab">
-      <div className="tab-header">
-        <h3>Attendance Tracking</h3>
-      </div>
-
-      <div className="today-attendance">
-        <h4>Today's Attendance - {new Date().toLocaleDateString()}</h4>
-        <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Status</label>
-              <select
-                value={todayAttendance.status}
-                onChange={(e) => setTodayAttendance({...todayAttendance, status: e.target.value})}
-              >
-                <option value="present">Present</option>
-                <option value="absent">Absent</option>
-                <option value="late">Late</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Arrival Time</label>
-              <input
-                type="time"
-                value={todayAttendance.arrivalTime}
-                onChange={(e) => setTodayAttendance({...todayAttendance, arrivalTime: e.target.value})}
-              />
-            </div>
-            <div className="form-group">
-              <label>Departure Time</label>
-              <input
-                type="time"
-                value={todayAttendance.departureTime}
-                onChange={(e) => setTodayAttendance({...todayAttendance, departureTime: e.target.value})}
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Notes</label>
-            <textarea
-              value={todayAttendance.notes}
-              onChange={(e) => setTodayAttendance({...todayAttendance, notes: e.target.value})}
-              placeholder="Any additional notes..."
-            />
-          </div>
-          <button type="submit" disabled={loading}>
-            {loading ? 'Updating...' : 'Update Attendance'}
-          </button>
-        </form>
-      </div>
-
-      <div className="attendance-history">
-        <h4>Attendance History</h4>
-        {attendance.length === 0 ? (
-          <div className="no-data">No attendance records yet.</div>
-        ) : (
-          <div className="attendance-list">
-            {attendance.map(record => (
-              <div key={record.id} className="attendance-record">
-                <div className="record-date">
-                  {new Date(record.date).toLocaleDateString()}
-                </div>
-                <div className="record-details">
-                  <span className={`status-badge ${record.status}`}>
-                    {record.status}
-                  </span>
-                  {record.arrivalTime && (
-                    <span className="time-info">
-                      Arrived: {record.arrivalTime}
-                    </span>
+                <button className="btn btn-primary btn-lg gap-2" onClick={() => setEditing(true)}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit Information
+                </button>
+              </>
+            ) : (
+              <div className="flex gap-3">
+                <button className="btn btn-success btn-lg gap-2" onClick={() => handleUpdateChild(childData)} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Save Changes
+                    </>
                   )}
-                  {record.departureTime && (
-                    <span className="time-info">
-                      Departed: {record.departureTime}
-                    </span>
+                </button>
+                <button className="btn btn-outline btn-lg" onClick={() => {
+                  setChildData(child);
+                  setEditing(false);
+                }}>
+                  Cancel
+                </button>
+              </div>
+            )}
+            <button className="btn btn-circle btn-ghost btn-lg hover:btn-error" onClick={onClose}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {error && (
+          <div className="alert alert-error mb-6 shadow-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Quick Info Card */}
+        <div className="card bg-gradient-to-r from-primary/10 to-secondary/10 shadow-xl border border-primary/20 mb-6">
+          <div className="card-body">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="avatar placeholder">
+                  <div className="bg-primary text-primary-content rounded-full w-20 h-20 text-4xl">
+                    {childData.gender === 'Female' ? '👧' : childData.gender === 'Male' ? '👦' : '🧒'}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-3xl font-bold text-primary">{childData.firstName} {childData.lastName}</h3>
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="badge badge-lg badge-primary">{calculateAge(childData.dateOfBirth)}</div>
+                    <div className="badge badge-lg badge-secondary">{childData.group}</div>
+                    <div className="badge badge-lg badge-outline">
+                      Born: {childData.dateOfBirth ? new Date(childData.dateOfBirth).toLocaleDateString() : 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Siblings Section */}
+        {childData.parentRegistered && (
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow mb-6">
+            <div className="card-body">
+              <h4 className="card-title text-xl text-primary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Siblings
+              </h4>
+              
+              {loadingSiblings ? (
+                <div className="flex justify-center items-center py-4">
+                  <span className="loading loading-spinner loading-md"></span>
+                </div>
+              ) : siblings.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {siblings.map(sibling => (
+                    <div key={sibling.id} className="card bg-base-200 shadow-md">
+                      <div className="card-body p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="text-2xl">
+                            {sibling.gender === 'Female' ? '👧' : sibling.gender === 'Male' ? '👦' : '🧒'}
+                          </div>
+                          <div>
+                            <h5 className="font-semibold">{sibling.firstName} {sibling.lastName}</h5>
+                            <p className="text-sm opacity-75">Age: {calculateAge(sibling.dateOfBirth)}</p>
+                            <div className="badge badge-outline badge-sm">{sibling.group}</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-base-content/70">No siblings found</p>
+                  {onAddSibling && (
+                    <button 
+                      className="btn btn-secondary btn-sm mt-2"
+                      onClick={() => onAddSibling(childData)}
+                    >
+                      Add First Sibling
+                    </button>
                   )}
                 </div>
-                {record.notes && (
-                  <div className="record-notes">
-                    Notes: {record.notes}
-                  </div>
-                )}
-              </div>
-            ))}
+              )}
+              
+              {onAddSibling && siblings.length > 0 && (
+                <div className="flex justify-center mt-4">
+                  <button 
+                    className="btn btn-secondary"
+                    onClick={() => onAddSibling(childData)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    Add Another Sibling
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-};
 
-// Meals Tab Component
-const MealsTab = ({ meals, onRecordMeal, loading }) => {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newMeal, setNewMeal] = useState({
-    mealType: 'breakfast',
-    foodItems: '',
-    amountEaten: 'all',
-    notes: '',
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().slice(0, 5)
-  });
-
-  const mealTypes = ['breakfast', 'lunch', 'dinner', 'snack'];
-  const amountOptions = ['all', 'most', 'some', 'little', 'none'];
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await onRecordMeal({
-      ...newMeal,
-      foodItems: newMeal.foodItems.split(',').map(item => item.trim()).filter(item => item)
-    });
-    setNewMeal({
-      mealType: 'breakfast',
-      foodItems: '',
-      amountEaten: 'all',
-      notes: '',
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().slice(0, 5)
-    });
-    setShowAddForm(false);
-  };
-
-  return (
-    <div className="meals-tab">
-      <div className="tab-header">
-        <h3>Meal Tracking</h3>
-        <button 
-          className="add-btn"
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          {showAddForm ? 'Cancel' : 'Record Meal'}
-        </button>
-      </div>
-
-      {showAddForm && (
-        <div className="add-form">
-          <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Meal Type</label>
-                <select
-                  value={newMeal.mealType}
-                  onChange={(e) => setNewMeal({...newMeal, mealType: e.target.value})}
-                  required
-                >
-                  {mealTypes.map(type => (
-                    <option key={type} value={type}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Date</label>
-                <input
-                  type="date"
-                  value={newMeal.date}
-                  onChange={(e) => setNewMeal({...newMeal, date: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Time</label>
-                <input
-                  type="time"
-                  value={newMeal.time}
-                  onChange={(e) => setNewMeal({...newMeal, time: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Food Items (comma separated)</label>
-              <textarea
-                value={newMeal.foodItems}
-                onChange={(e) => setNewMeal({...newMeal, foodItems: e.target.value})}
-                placeholder="e.g., Chicken nuggets, Apple slices, Milk"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Amount Eaten</label>
-              <select
-                value={newMeal.amountEaten}
-                onChange={(e) => setNewMeal({...newMeal, amountEaten: e.target.value})}
-                required
-              >
-                {amountOptions.map(amount => (
-                  <option key={amount} value={amount}>
-                    {amount.charAt(0).toUpperCase() + amount.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Notes</label>
-              <textarea
-                value={newMeal.notes}
-                onChange={(e) => setNewMeal({...newMeal, notes: e.target.value})}
-                placeholder="Any observations or notes..."
-              />
-            </div>
-            <button type="submit" disabled={loading}>
-              {loading ? 'Recording...' : 'Record Meal'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="meals-list">
-        {meals.length === 0 ? (
-          <div className="no-data">No meal records yet.</div>
-        ) : (
-          meals.map(meal => (
-            <div key={meal.id} className="meal-card">
-              <div className="meal-header">
-                <span className={`meal-type ${meal.mealType}`}>
-                  {meal.mealType.charAt(0).toUpperCase() + meal.mealType.slice(1)}
-                </span>
-                <span className="meal-datetime">
-                  {new Date(meal.date).toLocaleDateString()} at {meal.time}
-                </span>
-              </div>
-              <div className="meal-content">
-                <div className="food-items">
-                  <strong>Food Items:</strong>
-                  <ul>
-                    {Array.isArray(meal.foodItems) ? 
-                      meal.foodItems.map((item, index) => (
-                        <li key={index}>{item}</li>
-                      )) : 
-                      <li>{meal.foodItems}</li>
-                    }
-                  </ul>
+        {/* Child Information Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Basic Information */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+            <div className="card-body">
+              <h4 className="card-title text-xl text-primary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Basic Information
+              </h4>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="font-medium">Full Name:</span>
+                  <span>{childData.firstName} {childData.lastName}</span>
                 </div>
-                <div className="amount-eaten">
-                  <strong>Amount Eaten:</strong> 
-                  <span className={`amount ${meal.amountEaten}`}>
-                    {meal.amountEaten.charAt(0).toUpperCase() + meal.amountEaten.slice(1)}
+                <div className="flex justify-between">
+                  <span className="font-medium">Date of Birth:</span>
+                  <span>{childData.dateOfBirth ? new Date(childData.dateOfBirth).toLocaleDateString() : 'Not specified'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Gender:</span>
+                  <span>{childData.gender || 'Not specified'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Age:</span>
+                  <span>{calculateAge(childData.dateOfBirth)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Group:</span>
+                  <span className="badge badge-outline">{childData.group}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Parent Information */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+            <div className="card-body">
+              <h4 className="card-title text-xl text-primary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Parent Information
+              </h4>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="font-medium">Parent Name:</span>
+                  <span>{childData.parentFirstName} {childData.parentLastName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Email:</span>
+                  <span>{childData.parentEmail}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Phone:</span>
+                  <span>{childData.parentPhone || 'Not provided'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Registration Status:</span>
+                  <span className={`badge ${childData.parentRegistered ? 'badge-success' : 'badge-warning'}`}>
+                    {childData.parentRegistered ? 'Registered' : 'Awaiting Registration'}
                   </span>
                 </div>
-                {meal.notes && (
-                  <div className="meal-notes">
-                    <strong>Notes:</strong> {meal.notes}
+                {!childData.parentRegistered && (
+                  <div className="flex justify-between">
+                    <span className="font-medium">Access Code:</span>
+                    <span className="font-mono">{childData.accessCode}</span>
                   </div>
                 )}
               </div>
             </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-};
+          </div>
 
-// Naps Tab Component
-const NapsTab = ({ naps, onRecordNap, loading }) => {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newNap, setNewNap] = useState({
-    startTime: '',
-    endTime: '',
-    quality: 'good',
-    notes: '',
-    date: new Date().toISOString().split('T')[0]
-  });
-
-  const qualityOptions = ['excellent', 'good', 'fair', 'poor', 'restless'];
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Calculate duration
-    const start = new Date(`${newNap.date}T${newNap.startTime}`);
-    const end = new Date(`${newNap.date}T${newNap.endTime}`);
-    const durationMinutes = Math.round((end - start) / (1000 * 60));
-    
-    await onRecordNap({
-      ...newNap,
-      duration: durationMinutes
-    });
-    
-    setNewNap({
-      startTime: '',
-      endTime: '',
-      quality: 'good',
-      notes: '',
-      date: new Date().toISOString().split('T')[0]
-    });
-    setShowAddForm(false);
-  };
-
-  const formatDuration = (minutes) => {
-    if (!minutes || minutes <= 0) return 'N/A';
-    
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
-    } else {
-      return `${mins}m`;
-    }
-  };
-
-  return (
-    <div className="naps-tab">
-      <div className="tab-header">
-        <h3>Nap Tracking</h3>
-        <button 
-          className="add-btn"
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          {showAddForm ? 'Cancel' : 'Record Nap'}
-        </button>
-      </div>
-
-      {showAddForm && (
-        <div className="add-form">
-          <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Date</label>
-                <input
-                  type="date"
-                  value={newNap.date}
-                  onChange={(e) => setNewNap({...newNap, date: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>Start Time</label>
-                <input
-                  type="time"
-                  value={newNap.startTime}
-                  onChange={(e) => setNewNap({...newNap, startTime: e.target.value})}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>End Time</label>
-                <input
-                  type="time"
-                  value={newNap.endTime}
-                  onChange={(e) => setNewNap({...newNap, endTime: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            <div className="form-group">
-              <label>Sleep Quality</label>
-              <select
-                value={newNap.quality}
-                onChange={(e) => setNewNap({...newNap, quality: e.target.value})}
-                required
-              >
-                {qualityOptions.map(quality => (
-                  <option key={quality} value={quality}>
-                    {quality.charAt(0).toUpperCase() + quality.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Notes</label>
-              <textarea
-                value={newNap.notes}
-                onChange={(e) => setNewNap({...newNap, notes: e.target.value})}
-                placeholder="How did the child sleep? Any observations..."
-              />
-            </div>
-            <button type="submit" disabled={loading}>
-              {loading ? 'Recording...' : 'Record Nap'}
-            </button>
-          </form>
-        </div>
-      )}
-
-      <div className="naps-list">
-        {naps.length === 0 ? (
-          <div className="no-data">No nap records yet.</div>
-        ) : (
-          naps.map(nap => (
-            <div key={nap.id} className="nap-card">
-              <div className="nap-header">
-                <span className="nap-date">
-                  {new Date(nap.date).toLocaleDateString()}
-                </span>
-                <span className={`nap-quality ${nap.quality}`}>
-                  {nap.quality.charAt(0).toUpperCase() + nap.quality.slice(1)} Sleep
-                </span>
-              </div>
-              <div className="nap-content">
-                <div className="nap-time-info">
-                  <div className="time-detail">
-                    <strong>Start:</strong> {nap.startTime}
-                  </div>
-                  <div className="time-detail">
-                    <strong>End:</strong> {nap.endTime}
-                  </div>
-                  <div className="time-detail">
-                    <strong>Duration:</strong> {formatDuration(nap.duration)}
+          {/* Medical Information */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+            <div className="card-body">
+              <h4 className="card-title text-xl text-primary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+                Medical Information
+              </h4>
+              <div className="space-y-3">
+                <div>
+                  <span className="font-medium">Allergies:</span>
+                  <div className="mt-1">
+                    {childData.allergies && childData.allergies.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {childData.allergies.map((allergy, index) => (
+                          <span key={index} className="badge badge-error badge-sm">{allergy}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-base-content/70">None specified</span>
+                    )}
                   </div>
                 </div>
-                {nap.notes && (
-                  <div className="nap-notes">
-                    <strong>Notes:</strong> {nap.notes}
+                <div>
+                  <span className="font-medium">Medical Conditions:</span>
+                  <div className="mt-1">
+                    {childData.medicalConditions && childData.medicalConditions.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {childData.medicalConditions.map((condition, index) => (
+                          <span key={index} className="badge badge-warning badge-sm">{condition}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-base-content/70">None specified</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="font-medium">Medications:</span>
+                  <div className="mt-1">
+                    {childData.medications && childData.medications.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {childData.medications.map((medication, index) => (
+                          <span key={index} className="badge badge-info badge-sm">{medication}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-base-content/70">None specified</span>
+                    )}
+                  </div>
+                </div>
+                {childData.dietaryRestrictions && (
+                  <div>
+                    <span className="font-medium">Dietary Restrictions:</span>
+                    <p className="mt-1">{childData.dietaryRestrictions}</p>
                   </div>
                 )}
               </div>
             </div>
-          ))
+          </div>
+
+          {/* Emergency Contact */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+            <div className="card-body">
+              <h4 className="card-title text-xl text-primary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                Emergency Contact
+              </h4>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="font-medium">Name:</span>
+                  <span>{childData.emergencyContact || 'Not provided'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Phone:</span>
+                  <span>{childData.emergencyPhone || 'Not provided'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Relationship:</span>
+                  <span>{childData.emergencyRelationship || 'Not specified'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Designated Pickup Person */}
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+            <div className="card-body">
+              <h4 className="card-title text-xl text-primary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                </svg>
+                Designated Pickup Person
+              </h4>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="font-medium">Name:</span>
+                  <span>{childData.pickupPersonName || 'Not specified'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Phone:</span>
+                  <span>{childData.pickupPersonPhone || 'Not provided'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Relationship:</span>
+                  <span>{childData.pickupPersonRelationship || 'Not specified'}</span>
+                </div>
+                {(childData.pickupPersonName || childData.pickupPersonPhone || childData.pickupPersonRelationship) && (
+                  <div className="alert alert-info">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm">This person is authorized to pick up {childData.firstName}. Verify ID before release.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Notes */}
+        {(childData.specialNeeds || childData.notes) && (
+          <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow mt-6">
+            <div className="card-body">
+              <h4 className="card-title text-xl text-primary flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Additional Information
+              </h4>
+              <div className="space-y-3">
+                {childData.specialNeeds && (
+                  <div>
+                    <span className="font-medium">Special Needs:</span>
+                    <p className="mt-1">{childData.specialNeeds}</p>
+                  </div>
+                )}
+                {childData.notes && (
+                  <div>
+                    <span className="font-medium">Notes:</span>
+                    <p className="mt-1">{childData.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

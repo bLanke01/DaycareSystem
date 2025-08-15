@@ -836,9 +836,11 @@ const ActivityLog = () => {
 
       {/* Filters */}
       <div className="card bg-base-200 p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="form-control">
-            <label className="label">Child:</label>
+        <div className="admin-form-grid">
+          <div className="admin-form-control">
+            <label className="label">
+              <span className="label-text">Child:</span>
+            </label>
             <select 
               className="select select-bordered w-full"
               value={filterChild} 
@@ -853,8 +855,10 @@ const ActivityLog = () => {
             </select>
           </div>
           
-          <div className="form-control">
-            <label className="label">Activity Type:</label>
+          <div className="admin-form-control">
+            <label className="label">
+              <span className="label-text">Activity Type:</span>
+            </label>
             <select 
               className="select select-bordered w-full"
               value={filterType} 
@@ -869,8 +873,10 @@ const ActivityLog = () => {
             </select>
           </div>
           
-          <div className="form-control">
-            <label className="label">Date:</label>
+          <div className="admin-form-control">
+            <label className="label">
+              <span className="label-text">Date:</span>
+            </label>
             <input
               type="date"
               className="input input-bordered w-full"
