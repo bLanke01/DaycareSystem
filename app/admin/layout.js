@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';  
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../firebase/auth-context';
@@ -222,7 +223,8 @@ const AdminDashboardLayout = ({ children }) => {
                   </li>
                   <li role="none">
                     <Link href="/admin/settings" role="menuitem" className="flex items-center gap-2">
-                      <span>⚙️</span>
+                      <span>
+                        <Image src="/Emojis/Teddy_bear-Photoroom.png" alt="Teddy Bear Emoji" width={30} height={30} className="inline-block align-middle" /></span>
                       <span>Settings</span>
                     </Link>
                   </li>

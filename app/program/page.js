@@ -7,7 +7,7 @@ export default function Program() {
     {
       id: 'infant',
       title: 'Infant Care',
-      emoji: '👶',
+      emoji: <Image src="/Emojis/Baby_emoji-Photoroom.png" alt="Baby Emoji" width={40} height={40} className="inline-block align-middle" />,
       age: '6 - 18 months',
       capacity: '6 children',
       ratio: '1:3 ratio',
@@ -27,7 +27,7 @@ export default function Program() {
     {
       id: 'toddler',
       title: 'Toddler Program',
-      emoji: '🧸',
+      emoji: <Image src="/Emojis/TeddyBear_emoji-Photoroom.png" alt="Teddy Bear Emoji" width={40} height={40} className="inline-block align-middle" />,
       age: '18 months - 3 years',
       capacity: '8 children',
       ratio: '1:4 ratio',
@@ -47,7 +47,7 @@ export default function Program() {
     {
       id: 'preschool',
       title: 'Preschool Program',
-      emoji: '🎨',
+      emoji: <Image src="/Emojis/art_emoji-Photoroom.png" alt="Arts Emoji" width={40} height={40} className="inline-block align-middle" />,
       age: '3 - 5 years',
       capacity: '12 children',
       ratio: '1:6 ratio',
@@ -67,7 +67,7 @@ export default function Program() {
     {
       id: 'afterschool',
       title: 'After-School Care',
-      emoji: '📖',
+      emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={40} height={40} className="inline-block align-middle" />,
       age: '5 - 12 years',
       capacity: '20 children',
       ratio: '1:10 ratio',
@@ -89,7 +89,7 @@ export default function Program() {
   const beliefs = [
     {
       title: 'We Value Their Smiles',
-      emoji: '😊',
+      emoji: <Image src="/Emojis/Happy_emoji-Photoroom.png" alt="Happy Emoji" width={40} height={40} className="inline-block align-middle" />,
       description: 'We believe that a child\'s smile is a reflection of their happiness and well-being. At TinyLog, we are dedicated to creating a safe, nurturing environment where every child feels valued and supported.',
       image: '/a15.jpg'
     },
@@ -206,7 +206,7 @@ export default function Program() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
-              Age-Specific Programs <span className="text-4xl">👶🧒👦👧</span>
+              Age-Specific Programs <span className="text-4xl"></span>
             </h2>
             <p className="text-xl text-base-content max-w-3xl mx-auto">
               Each TinyLog program is carefully crafted to meet the developmental needs and interests 
@@ -273,7 +273,7 @@ export default function Program() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
-              A Day at TinyLog <span className="text-4xl">⏰🌈</span>
+              A Day at TinyLog <span className="text-4xl"></span>
             </h2>
             <p className="text-xl text-base-content max-w-3xl mx-auto">
               Our structured yet flexible daily routine provides predictability while allowing 
@@ -306,7 +306,7 @@ export default function Program() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
-              Daily Activities <span className="text-4xl">✨🎈</span>
+              Daily Activities <span className="text-4xl"></span>
             </h2>
             <p className="text-xl text-gray-600">
               Fun and engaging activities that make every day special at TinyLog daycare.
@@ -340,7 +340,7 @@ export default function Program() {
       <div className="py-20 bg-gradient-to-r from-primary to-secondary text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-5xl font-bold mb-6">
-            Ready to Start the TinyLog Journey? <span className="text-4xl">🚀✨</span>
+            Ready to Start the TinyLog Journey? <span className="text-4xl"></span>
           </h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
             Give your child the gift of quality early education in a loving, nurturing environment. 
@@ -360,7 +360,7 @@ export default function Program() {
               </button>
             </Link>
             <a href="tel:+14035551234" className="btn btn-ghost btn-lg text-white hover:bg-white/20">
-              <span className="text-xl mr-2">📞</span>
+              <span className="text-xl mr-2"><Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Photo" width={30} height={30}></Image></span>
               Call Us Today
             </a>
           </div>
