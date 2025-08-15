@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../firebase/auth-context';
+import Image from 'next/image';
 
 const ParentSidebar = ({ isOpen, onClose }) => {
   const pathname = usePathname();
@@ -15,56 +16,48 @@ const ParentSidebar = ({ isOpen, onClose }) => {
   
   // Define menu items with groups and metadata
   const menuItems = [
-    { 
-      icon: '👶', 
-      label: 'Child Profile', 
+    {
+      title: 'My Children',
       path: '/parent',
-      description: 'View your child\'s overview and recent activities'
+      icon: <Image src="/Emojis/Baby_emoji-Photoroom.png" alt="Baby Emoji" width={24} height={24} />
     },
-    { 
-      icon: '📅', 
-      label: 'Schedules', 
+    {
+      title: 'Schedule',
       path: '/parent/schedules',
-      description: 'View your child\'s daily schedule and events'
+      icon: <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} />
     },
-    { 
-      icon: '💬', 
-      label: 'Messages', 
+    {
+      title: 'Messages',
       path: '/parent/messages',
-      description: 'Communicate with teachers and staff'
+      icon: <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} />
     },
-    { 
-      icon: '👥', 
-      label: 'Manage Children', 
-      path: '/parent/manage-children',
-      description: 'Update your children\'s information'
+    {
+      title: 'Accounts',
+      path: '/parent/accounts',
+      icon: <Image src="/Emojis/Staff_emoji-Photoroom.png" alt="Staff Emoji" width={24} height={24} />
     },
-    { 
-      icon: '💰', 
-      label: 'Invoices', 
+    {
+      title: 'Invoices',
       path: '/parent/invoices',
-      description: 'View and pay invoices'
-    },
+      icon: <Image src="/Emojis/Enroll_emoji-Photoroom.png" alt="Enroll Emoji" width={24} height={24} />
+    }
   ];
   
   const otherItems = [
     { 
-      icon: '⚙️', 
-      label: 'Settings', 
+      title: 'Settings', 
       path: '/parent/settings',
-      description: 'Configure your account preferences'
+      icon: <Image src="/Emojis/About_Emoji-Photoroom.png" alt="About Emoji" width={24} height={24} />
     },
     { 
-      icon: '👤', 
-      label: 'Account', 
+      title: 'Account', 
       path: '/parent/account',
-      description: 'Manage your profile information'
+      icon: <Image src="/Emojis/Staff_emoji-Photoroom.png" alt="Staff Emoji" width={24} height={24} />
     },
     { 
-      icon: '❓', 
-      label: 'Help', 
+      title: 'Help', 
       path: '/parent/help',
-      description: 'Get help and support'
+      icon: <Image src="/Emojis/QA_emoji-Photoroom.png" alt="Question Emoji" width={24} height={24} />
     },
   ];
 
@@ -158,15 +151,11 @@ const ParentSidebar = ({ isOpen, onClose }) => {
             }`}
             role="menuitem"
             aria-current={isActive(item.path) ? 'page' : undefined}
-            aria-describedby={`${item.path.replace(/\//g, '-')}-desc`}
             onClick={() => onClose && onClose()}
           >
             <span className="text-xl" aria-hidden="true">{item.icon}</span>
             <div className="flex flex-col items-start">
-              <span className="font-medium">{item.label}</span>
-              <span className="sr-only" id={`${item.path.replace(/\//g, '-')}-desc`}>
-                {item.description}
-              </span>
+              <span className="font-medium">{item.title}</span>
             </div>
           </Link>
         </li>

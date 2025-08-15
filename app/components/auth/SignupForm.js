@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { auth, db } from '../../firebase/config';
@@ -458,19 +459,19 @@ const SignupForm = () => {
                 <h3 className="font-semibold mb-2">After creating your account, you can:</h3>
                 <ul className="space-y-2 text-left">
                   <li className="flex items-center gap-2">
-                    <span className="text-lg">📱</span>
+                    <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} />
                     <span>View your child's daily activities</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-lg">📅</span>
+                    <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} />
                     <span>Check schedules and events</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-lg">💬</span>
+                    <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} />
                     <span>Message daycare staff</span>
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="text-lg">🔗</span>
+                    <Image src="/Emojis/Login_emoji-Photoroom.png" alt="Login Emoji" width={24} height={24} />
                     <span>Link your Google account for easy login (optional)</span>
                   </li>
                 </ul>

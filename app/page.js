@@ -1,8 +1,52 @@
-// app/page.js
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { useState } from 'react';
 
 export default function Home() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+  
+  const slides = [
+    {
+      id: 1,
+      src: "/a11.jpg",
+      alt: "Happy children playing at TinyLog daycare"
+    },
+    {
+      id: 2,
+      src: "/a12.jpg",
+      alt: "Children learning and having fun at TinyLog"
+    },
+    {
+      id: 3,
+      src: "/a13.jpg",
+      alt: "Safe and nurturing environment at TinyLog"
+    },
+    {
+      id: 4,
+      src: "/a14.jpg",
+      alt: "Creative activities and learning at TinyLog"
+    },
+    {
+      id: 5,
+      src: "/a15.jpg",
+      alt: "Children enjoying outdoor activities at TinyLog"
+    }
+  ];
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % slides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const goToSlide = (index) => {
+    setCurrentSlide(index);
+  };
+
   return (
     <div className="min-h-screen bg-base-100">
       {/* Hero Section */}
@@ -11,75 +55,46 @@ export default function Home() {
           <div className="lg:w-1/2">
             {/* Image Carousel */}
             <div className="carousel w-full h-[450px] rounded-2xl shadow-2xl">
-              <div id="slide1" className="carousel-item relative w-full">
-                <Image
-                  src="/a11.jpg"
-                  alt="Happy children playing at TinyLog daycare"
-                  fill
-                  className="object-cover rounded-2xl"
-                />
-                <div className="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-                  <a href="#slide5" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❮</a>
-                  <a href="#slide2" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❯</a>
+              {slides.map((slide, index) => (
+                <div 
+                  key={slide.id} 
+                  className={`carousel-item relative w-full ${index === currentSlide ? 'block' : 'hidden'}`}
+                >
+                  <Image
+                    src={slide.src}
+                    alt={slide.alt}
+                    fill
+                    className="object-cover rounded-2xl"
+                  />
+                  <div className="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
+                    <button 
+                      onClick={prevSlide}
+                      className="btn btn-circle btn-sm opacity-75 hover:opacity-100"
+                    >
+                      ❮
+                    </button>
+                    <button 
+                      onClick={nextSlide}
+                      className="btn btn-circle btn-sm opacity-75 hover:opacity-100"
+                    >
+                      ❯
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div id="slide2" className="carousel-item relative w-full">
-                <Image
-                  src="/a12.jpg"
-                  alt="Children learning and having fun at TinyLog"
-                  fill
-                  className="object-cover rounded-2xl"
-                />
-                <div className="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-                  <a href="#slide1" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❮</a>
-                  <a href="#slide3" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❯</a>
-                </div>
-              </div>
-              <div id="slide3" className="carousel-item relative w-full">
-                <Image
-                  src="/a13.jpg"
-                  alt="Safe and nurturing environment at TinyLog"
-                  fill
-                  className="object-cover rounded-2xl"
-                />
-                <div className="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-                  <a href="#slide2" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❮</a>
-                  <a href="#slide4" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❯</a>
-                </div>
-              </div>
-              <div id="slide4" className="carousel-item relative w-full">
-                <Image
-                  src="/a14.jpg"
-                  alt="Creative activities and learning at TinyLog"
-                  fill
-                  className="object-cover rounded-2xl"
-                />
-                <div className="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-                  <a href="#slide3" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❮</a>
-                  <a href="#slide5" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❯</a>
-                </div>
-              </div>
-              <div id="slide5" className="carousel-item relative w-full">
-                <Image
-                  src="/a15.jpg"
-                  alt="Children enjoying outdoor activities at TinyLog"
-                  fill
-                  className="object-cover rounded-2xl"
-                />
-                <div className="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
-                  <a href="#slide4" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❮</a>
-                  <a href="#slide1" className="btn btn-circle btn-sm opacity-75 hover:opacity-100">❯</a>
-                </div>
-              </div>
+              ))}
             </div>
             
             {/* Carousel Indicators */}
             <div className="flex justify-center w-full py-4 gap-2">
-              <a href="#slide1" className="btn btn-xs btn-circle">1</a>
-              <a href="#slide2" className="btn btn-xs btn-circle">2</a>
-              <a href="#slide3" className="btn btn-xs btn-circle">3</a>
-              <a href="#slide4" className="btn btn-xs btn-circle">4</a>
-              <a href="#slide5" className="btn btn-xs btn-circle">5</a>
+              {slides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  onClick={() => goToSlide(index)}
+                  className={`btn btn-xs btn-circle ${index === currentSlide ? 'btn-primary' : ''}`}
+                >
+                  {index + 1}
+                </button>
+              ))}
             </div>
           </div>
           
@@ -94,7 +109,7 @@ export default function Home() {
               Where Little Dreams Come to Life! 
               <span className="text-4xl"><Image src="/Emojis/Rainbow_emoji-Photoroom.png" alt="Rainbow Emoji" width={60} height={60} /></span>
             </h1>
-                          <p className="py-6 text-xl text-base-content leading-relaxed">
+            <p className="py-6 text-xl text-base-content leading-relaxed">
               Give your child the perfect start with our nurturing daycare! TinyLog provides a safe, 
               fun, and educational environment where children ages 6 months to 12 years can 
               grow, learn, and make lasting friendships. 
@@ -214,7 +229,7 @@ export default function Home() {
           <div className="flex gap-6 justify-center flex-wrap">
             <Link href="/auth/signup">
               <button className="btn btn-accent btn-lg text-lg px-8">
-                <span className="text-2xl mr-2"><Image src="/Emojis/Sign_emoji-Photoroom.png" alt="Sign Emoji" width={30} height={30} className="inline-block align-middle" /></span>
+                <span className="text-2xl mr-2"><Image src="/Emojis/Signup_emoji-Photoroom.png" alt="Signup Emoji" width={30} height={30} className="inline-block align-middle" /></span>
                 Get Started Now
               </button>
             </Link>

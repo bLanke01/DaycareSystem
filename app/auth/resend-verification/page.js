@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { auth } from '../../firebase/config';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function ResendVerification() {
   const [email, setEmail] = useState('');
@@ -28,7 +29,7 @@ export default function ResendVerification() {
       const user = userCredential.user;
       
       if (user.emailVerified) {
-        setMessage('✅ Your email is already verified! You can now log in normally.');
+        setMessage('Your email is already verified! You can now log in normally.');
         await signOut(auth);
         return;
       }
@@ -44,11 +45,11 @@ export default function ResendVerification() {
       // Sign out the user
       await signOut(auth);
       
-      setMessage(
-        '📧 Verification email sent successfully!\n\n' +
-        'Please check your inbox (and spam folder) for the verification email.\n\n' +
-        'Click the link in the email to verify your account, then try logging in again.'
-      );
+              setMessage(
+          'Verification email sent successfully!\n\n' +
+          'Please check your inbox (and spam folder) for the verification email.\n' +
+          'Click the verification link in the email to activate your account.'
+        );
       
       console.log('✅ Verification email sent successfully');
       
@@ -169,7 +170,10 @@ export default function ResendVerification() {
             
             <div className="card bg-base-200">
               <div className="card-body">
-                <h3 className="font-semibold mb-2">📧 Email Verification Help</h3>
+                <h3 className="font-semibold mb-2">
+                  <Image src="/Emojis/Email_emoji-Photoroom.png" alt="Email Emoji" width={24} height={24} className="inline-block mr-2" />
+                  Email Verification Help
+                </h3>
                 <ul className="space-y-2">
                   <li className="flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-info" viewBox="0 0 20 20" fill="currentColor">

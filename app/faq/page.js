@@ -1,81 +1,81 @@
 // app/faq/page.js
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import Image from 'next/image';
 
 export default function FAQ() {
   // FAQ data with answers
   const faqItems = [
     {
       id: "ratio",
-      question: "What is the caregiver-to-child ratio?",
-      answer: "We maintain low ratios to ensure personalized attention: 1:3 for infants (6-18 months), 1:4 for toddlers (18 months-3 years), and 1:8 for preschoolers (3-5 years). This exceeds provincial requirements and allows our staff to provide individualized care and attention to each child.",
+      question: "What are your staff-to-child ratios?",
+      answer: "We maintain excellent staff-to-child ratios: 1:4 for infants (6 weeks - 12 months), 1:6 for toddlers (12-24 months), 1:8 for preschoolers (2-5 years), and 1:10 for school-age children (5-12 years).",
       category: "staffing",
-      emoji: "👥"
+      emoji: <Image src="/Emojis/Staff_emoji-Photoroom.png" alt="Staff Emoji" width={24} height={24} />
     },
     {
       id: "training",
-      question: "Are the staff members trained in first aid and CPR?",
-      answer: "Absolutely! All our staff members hold current Standard First Aid and CPR certification, including Infant and Child CPR. We also require ongoing professional development training in early childhood education, and all staff undergo thorough background checks including vulnerable sector screening.",
+      question: "What is your sick child policy?",
+      answer: "Children with fever (100.4°F or higher), vomiting, diarrhea, or contagious conditions must stay home until symptom-free for 24 hours. We follow strict health guidelines to protect all children.",
       category: "safety",
-      emoji: "🚑"
+      emoji: <Image src="/Emojis/Security_emoji-Photoroom.png" alt="Security Emoji" width={24} height={24} />
     },
     {
       id: "qualifications",
-      question: "What are the qualifications and experience of the caregivers?",
-      answer: "Our caregivers hold Early Childhood Education (ECE) certification or equivalent credentials. Our lead teachers have a minimum of 3 years experience, and many have 10+ years in early childhood education. We invest in continuous professional development to ensure our team stays current with best practices.",
-      category: "staffing",
-      emoji: "🎓"
+      question: "What educational programs do you offer?",
+      answer: "We offer age-appropriate curriculum including early literacy, math concepts, science exploration, art, music, and physical development. Our programs are designed to prepare children for kindergarten and beyond.",
+      category: "programs",
+      emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} />
     },
     {
       id: "dietary",
-      question: "How do you handle children with dietary restrictions?",
-      answer: "We work closely with families to accommodate all dietary needs including allergies, intolerances, and cultural/religious preferences. We prepare fresh, nutritious meals daily and can modify recipes as needed. All staff are trained on food safety and allergy management protocols.",
+      question: "What meals and snacks do you provide?",
+      answer: "We provide nutritious breakfast, lunch, and afternoon snacks. All meals meet USDA guidelines and accommodate dietary restrictions. We encourage healthy eating habits and food exploration.",
       category: "nutrition",
-      emoji: "🍎"
+      emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} />
     },
     {
       id: "activities",
-      question: "What types of activities do the children engage in?",
-      answer: "Our daily program includes creative arts, music and movement, outdoor play, STEM exploration, dramatic play, reading time, and age-appropriate learning activities. We follow a play-based curriculum that promotes social, emotional, physical, and cognitive development through fun, engaging experiences.",
+      question: "What art and creative activities do you offer?",
+      answer: "We provide daily creative activities including painting, drawing, crafts, music, dramatic play, and sensory exploration. All materials are child-safe and age-appropriate.",
       category: "programs",
-      emoji: "🎨"
+      emoji: <Image src="/Emojis/art_emoji-Photoroom.png" alt="Art Emoji" width={24} height={24} />
     },
     {
       id: "allergies",
-      question: "Do you accommodate food allergies or special diets?",
-      answer: "Yes! We have extensive experience managing food allergies and special dietary needs. We maintain detailed allergy action plans, use separate preparation areas when needed, and ensure all staff are trained on emergency procedures. We can accommodate vegetarian, vegan, halal, kosher, and other dietary requirements.",
+      question: "How do you handle food allergies?",
+      answer: "We take food allergies very seriously. Parents must provide detailed allergy information, and we maintain strict protocols to prevent cross-contamination. All staff are trained in allergy management.",
       category: "nutrition",
-      emoji: "🥗"
+      emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} />
     },
     {
       id: "reports",
-      question: "Do you provide progress reports for children?",
-      answer: "We provide detailed daily reports for infants and toddlers, and weekly reports for preschoolers. Monthly development assessments track milestones and learning progress. We also offer parent-teacher conferences twice yearly and maintain an open-door policy for ongoing communication.",
-      category: "communication",
-      emoji: "📊"
+      question: "How do you track my child's progress?",
+      answer: "We use comprehensive assessment tools to track development across all domains. Parents receive regular progress reports and can schedule conferences to discuss their child's growth and development.",
+      category: "programs",
+      emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} />
     },
     {
       id: "payment",
-      question: "What is the fee and payment structure?",
-      answer: "We offer flexible payment options including monthly, bi-weekly, or weekly payments. Fees vary by age group and program type. We accept e-transfer, automatic bank transfers, and credit cards. A registration fee and deposit are required to secure your spot. Financial assistance may be available.",
+      question: "What are your payment policies?",
+      answer: "Tuition is due weekly or monthly depending on your chosen plan. We accept various payment methods and offer flexible payment schedules. Late fees apply after the 5th of each month.",
       category: "admin",
-      emoji: "💰"
+      emoji: <Image src="/Emojis/Enroll_emoji-Photoroom.png" alt="Enroll Emoji" width={24} height={24} />
     },
     {
       id: "hours",
       question: "What are your operating hours?",
-      answer: "We're open Monday through Friday from 7:00 AM to 6:00 PM. We're closed on statutory holidays and have reduced hours during the holiday season. Extended hours may be available for families with special needs - please discuss this during enrollment.",
+      answer: "We're open Monday through Friday from 6:30 AM to 6:00 PM. We offer extended hours for an additional fee. We're closed on major holidays and have limited hours during holiday weeks.",
       category: "admin",
-      emoji: "🕐"
+      emoji: <Image src="/Emojis/Clock_emoji-Photoroom.png" alt="Clock Emoji" width={24} height={24} />
     },
     {
       id: "sick-policy",
-      question: "What is your sick child policy?",
-      answer: "Children must be fever-free for 24 hours before returning. We follow public health guidelines for communicable diseases. We provide daily health checks and will contact parents if a child becomes unwell. We maintain detailed health records and work with local health authorities when needed.",
+      question: "How do you handle temperature control?",
+      answer: "We maintain comfortable temperatures year-round (68-72°F) and monitor humidity levels. Our HVAC systems are regularly maintained, and we have backup systems for extreme weather conditions.",
       category: "safety",
-      emoji: "🌡️"
+      emoji: <Image src="/Emojis/Security_emoji-Photoroom.png" alt="Security Emoji" width={24} height={24} />
     }
   ];
 
@@ -84,13 +84,13 @@ export default function FAQ() {
   const [openItems, setOpenItems] = useState({});
 
   const categories = [
-    { id: 'all', name: 'All Questions', emoji: '📋' },
-    { id: 'safety', name: 'Safety & Health', emoji: '🛡️' },
-    { id: 'staffing', name: 'Staff & Care', emoji: '👨‍🏫' },
-    { id: 'programs', name: 'Programs & Activities', emoji: '🎯' },
-    { id: 'nutrition', name: 'Meals & Nutrition', emoji: '🍎' },
-    { id: 'communication', name: 'Communication', emoji: '📱' },
-    { id: 'admin', name: 'Admin & Fees', emoji: '📄' }
+    { id: 'all', name: 'All Questions', emoji: <Image src="/Emojis/MagGlass_emoji-Photoroom.png" alt="Magnifying Glass Emoji" width={24} height={24} /> },
+    { id: 'safety', name: 'Safety & Health', emoji: <Image src="/Emojis/Security_emoji-Photoroom.png" alt="Security Emoji" width={24} height={24} /> },
+    { id: 'staffing', name: 'Staff & Care', emoji: <Image src="/Emojis/Staff_emoji-Photoroom.png" alt="Staff Emoji" width={24} height={24} /> },
+    { id: 'programs', name: 'Programs & Activities', emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} /> },
+    { id: 'nutrition', name: 'Meals & Nutrition', emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} /> },
+    { id: 'communication', name: 'Communication', emoji: <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} /> },
+    { id: 'admin', name: 'Admin & Fees', emoji: <Image src="/Emojis/Enroll_emoji-Photoroom.png" alt="Enroll Emoji" width={24} height={24} /> }
   ];
 
   // Filter FAQs based on search and category
@@ -252,7 +252,7 @@ export default function FAQ() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-12">
               <h2 className="text-4xl font-bold text-primary mb-4">
-                Still Have Questions? <span className="text-3xl">🤔</span>
+                Still Have Questions? <Image src="/Emojis/QA_emoji-Photoroom.png" alt="Question Emoji" width={48} height={48} className="inline-block" />
               </h2>
               <p className="text-xl text-base-content">
                 Our team is always happy to help! Get in touch with us directly.
@@ -263,7 +263,9 @@ export default function FAQ() {
               <Link href="/contact">
                 <div className="card bg-gradient-to-br from-secondary/15 to-accent/10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
                   <div className="card-body text-center">
-                    <div className="text-5xl mb-4">📞</div>
+                    <div className="text-5xl mb-4">
+                      <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={80} height={80} />
+                    </div>
                     <h3 className="card-title justify-center text-primary">Call Us</h3>
                     <p className="text-base-content">Speak directly with our team</p>
                     <p className="font-semibold text-primary">(403) 555-1234</p>
@@ -274,7 +276,9 @@ export default function FAQ() {
               <Link href="/contact">
                 <div className="card bg-gradient-to-br from-base-300 to-neutral/15 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
                   <div className="card-body text-center">
-                    <div className="text-5xl mb-4">📧</div>
+                    <div className="text-5xl mb-4">
+                      <Image src="/Emojis/Email_emoji-Photoroom.png" alt="Email Emoji" width={80} height={80} />
+                    </div>
                     <h3 className="card-title justify-center text-primary">Email Us</h3>
                     <p className="text-base-content">Send us your questions</p>
                     <p className="font-semibold text-primary">info@daycare.com</p>
@@ -285,7 +289,9 @@ export default function FAQ() {
               <Link href="/contact">
                 <div className="card bg-gradient-to-br from-primary/12 to-secondary/8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer">
                   <div className="card-body text-center">
-                    <div className="text-5xl mb-4">🏠</div>
+                    <div className="text-5xl mb-4">
+                      <Image src="/Emojis/Home_Emoji-Photoroom.png" alt="Home Emoji" width={80} height={80} />
+                    </div>
                     <h3 className="card-title justify-center text-primary">Visit Us</h3>
                     <p className="text-base-content">Schedule a tour today</p>
                     <p className="font-semibold text-primary">Book Tour</p>
@@ -301,7 +307,7 @@ export default function FAQ() {
       <div className="py-16 bg-gradient-to-r from-primary to-secondary text-white">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold mb-6">
-            Ready to Get Started? <span className="text-3xl">🚀</span>
+            Ready to Get Started? <Image src="/Emojis/Running_Emoji-Photoroom.png" alt="Running Emoji" width={48} height={48} className="inline-block" />
           </h2>
           <p className="text-xl mb-8 opacity-90 max-w-2xl mx-auto">
             Join our daycare family today! We're here to support your child's growth and development 
@@ -310,13 +316,13 @@ export default function FAQ() {
           <div className="flex gap-6 justify-center flex-wrap">
             <Link href="/contact">
               <button className="btn btn-accent btn-lg">
-                <span className="text-xl mr-2">📅</span>
+                <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} className="mr-2" />
                 Schedule Tour
               </button>
             </Link>
             <Link href="/auth/signup">
               <button className="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary">
-                <span className="text-xl mr-2">📝</span>
+                <Image src="/Emojis/Signup_emoji-Photoroom.png" alt="Signup Emoji" width={24} height={24} className="mr-2" />
                 Start Enrollment
               </button>
             </Link>

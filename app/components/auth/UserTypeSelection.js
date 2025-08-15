@@ -26,17 +26,20 @@ const UserTypeSelection = () => {
   return (
     <div className="grid md:grid-cols-2 gap-8">
       {/* Parent Access Card */}
-                  <div className="card bg-gradient-to-br from-secondary/15 to-primary/10 border border-primary/20">
-        <div className="card-body text-center p-8">
+      <div className="card bg-gradient-to-br from-secondary/15 to-primary/10 border border-primary/20">
+        <div className="card-body text-center p-8 flex flex-col h-full">
           <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="text-white text-2xl font-bold">P</span>
           </div>
           <h3 className="text-2xl font-bold text-primary mb-4">Parent Access</h3>
-          <p className="text-base-content mb-8 leading-relaxed">
+          <p className="text-base-content mb-8 leading-relaxed flex-grow">
             For parents and guardians to manage their children's daycare experience
           </p>
           
-          <div className="space-y-4">
+          {/* Spacer div to push buttons to bottom */}
+          <div className="flex-grow"></div>
+          
+          <div className="flex flex-col gap-3">
             <button 
               className="btn btn-primary w-full btn-lg"
               onClick={handleLoginAsCustomer}
@@ -54,17 +57,27 @@ const UserTypeSelection = () => {
       </div>
       
       {/* Staff/Admin Access Card */}
-                  <div className="card bg-gradient-to-br from-base-300 to-accent/10 border border-accent/20">
-        <div className="card-body text-center p-8">
+      <div className="card bg-gradient-to-br from-base-300 to-accent/10 border border-accent/20">
+        <div className="card-body text-center p-8 flex flex-col h-full">
           <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-6">
             <span className="text-white text-2xl font-bold">S</span>
           </div>
           <h3 className="text-2xl font-bold text-primary mb-4">Staff/Admin Access</h3>
-          <p className="text-base-content mb-8 leading-relaxed">
+          <p className="text-base-content mb-6 leading-relaxed">
             For daycare staff and administrators to manage operations
           </p>
           
-          <div className="space-y-4">
+          {/* Info box moved above buttons */}
+          <div className="mb-6 p-4 bg-info/10 rounded-lg">
+            <p className="text-sm text-base-content/90">
+              Admin accounts are pre-created by Francesca
+            </p>
+          </div>
+          
+          {/* Spacer div to push buttons to bottom */}
+          <div className="flex-grow"></div>
+          
+          <div className="flex flex-col gap-3">
             <button 
               className="btn btn-primary w-full btn-lg"
               onClick={handleLoginAsStaff}
@@ -78,12 +91,6 @@ const UserTypeSelection = () => {
             >
               Sign up as Staff
             </button>
-          </div>
-          
-          <div className="mt-6 p-4 bg-info/10 rounded-lg">
-            <p className="text-sm text-base-content/90">
-              Admin accounts are pre-created by Francesca
-            </p>
           </div>
         </div>
       </div>

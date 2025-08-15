@@ -13,6 +13,7 @@ import {
   updateDoc 
 } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import Image from 'next/image';
 
 export default function NapTrackingPage() {
   const [children, setChildren] = useState([]);
@@ -329,13 +330,13 @@ export default function NapTrackingPage() {
               className={`tab ${activeView === 'schedule' ? 'tab-active' : ''}`}
               onClick={() => setActiveView('schedule')}
             >
-              📅 Nap Schedule
+              <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} className="inline-block mr-2" /> Nap Schedule
             </button>
             <button 
               className={`tab ${activeView === 'history' ? 'tab-active' : ''}`}
               onClick={() => setActiveView('history')}
             >
-              📊 Sleep History
+              <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} className="inline-block mr-2" /> Sleep History
             </button>
           </div>
         </div>
@@ -383,7 +384,7 @@ export default function NapTrackingPage() {
             Object.entries(groupedChildren).map(([group, groupChildren]) => (
               <div key={group} className="card bg-base-100 shadow-xl">
                 <div className="card-body">
-                  <h2 className="card-title">👶 {group} Room</h2>
+                  <h2 className="card-title"><Image src="/Emojis/Baby_emoji-Photoroom.png" alt="Baby Emoji" width={24} height={24} className="mr-2" /> {group} Room</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {groupChildren.map(child => {
                       const napStatus = getNapStatus(child);
@@ -430,7 +431,7 @@ export default function NapTrackingPage() {
                                     className="btn btn-primary btn-sm"
                                     onClick={() => endNap(child, 'good')}
                                   >
-                                    ✅ End Nap
+                                    <Image src="/Emojis/Star_emoji-Photoroom.png" alt="Star Emoji" width={20} height={20} className="mr-1" /> End Nap
                                   </button>
                                 </div>
                               </div>
@@ -472,14 +473,14 @@ export default function NapTrackingPage() {
         <div className="space-y-6">
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
-              <h2 className="card-title">📅 Daily Nap Schedule</h2>
+              <h2 className="card-title"><Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} className="mr-2" /> Daily Nap Schedule</h2>
               <p className="text-sm opacity-70">Recommended nap times by age group</p>
 
               <div className="space-y-8 mt-4">
                 {Object.entries(napSchedules).map(([group, schedules]) => (
                   <div key={group} className="card bg-base-200">
                     <div className="card-body">
-                      <h3 className="card-title">👶 {group} Room</h3>
+                      <h3 className="card-title"><Image src="/Emojis/Baby_emoji-Photoroom.png" alt="Baby Emoji" width={24} height={24} className="mr-2" /> {group} Room</h3>
                       <div className="space-y-4">
                         {schedules.map((schedule, index) => (
                           <div key={index} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-4 bg-base-100 rounded-lg">
@@ -537,7 +538,7 @@ export default function NapTrackingPage() {
             </div>
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
-                <h4 className="card-title">👶 Individual Needs</h4>
+                <h4 className="card-title"><Image src="/Emojis/Baby_emoji-Photoroom.png" alt="Baby Emoji" width={24} height={24} className="mr-2" /> Individual Needs</h4>
                 <p>Some children may need longer or shorter naps - adjust as needed</p>
               </div>
             </div>
@@ -550,7 +551,7 @@ export default function NapTrackingPage() {
         <div className="space-y-6">
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
-              <h2 className="card-title">📊 Sleep History - {new Date(selectedDate).toLocaleDateString()}</h2>
+              <h2 className="card-title"><Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} className="mr-2" /> Sleep History - {new Date(selectedDate).toLocaleDateString()}</h2>
 
               {napHistory.length === 0 ? (
                 <div className="text-center py-8">
@@ -562,7 +563,7 @@ export default function NapTrackingPage() {
                       console.log('Create sample nap data');
                     }}
                   >
-                    📊 View Different Date
+                    <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={20} height={20} className="mr-1" /> View Different Date
                   </button>
                 </div>
               ) : (
@@ -636,9 +637,9 @@ export default function NapTrackingPage() {
           </div>
 
           <div className="flex justify-center gap-4">
-            <button className="btn btn-outline">📄 Generate Sleep Report</button>
-            <button className="btn btn-outline">📧 Email to Parents</button>
-            <button className="btn btn-outline">📊 Weekly Analysis</button>
+                    <button className="btn btn-outline"><Image src="/Emojis/Enroll_emoji-Photoroom.png" alt="Enroll Emoji" width={20} height={20} className="mr-1" /> Generate Sleep Report</button>
+        <button className="btn btn-outline"><Image src="/Emojis/Email_emoji-Photoroom.png" alt="Email Emoji" width={20} height={20} className="mr-1" /> Email to Parents</button>
+        <button className="btn btn-outline"><Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={20} height={20} className="mr-1" /> Weekly Analysis</button>
           </div>
         </div>
       )}

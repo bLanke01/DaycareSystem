@@ -441,7 +441,7 @@ export default function StaffSchedulePage() {
 
         {/* Enhanced Modal for Edit/Delete Options */}
         {selectedEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 w-[400px] shadow-2xl transform transition-all duration-300">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-3">

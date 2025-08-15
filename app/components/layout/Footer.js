@@ -171,31 +171,7 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Newsletter Section */}
-      <div className="bg-gradient-to-r from-primary/15 to-secondary/12 py-12">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h3 className="text-2xl font-bold text-primary mb-4">
-              <span className="mr-2">📧</span>
-              Stay Connected with TinyLog!
-            </h3>
-            <p className="text-base-content mb-6">
-              Get updates on events, activities, and important announcements delivered to your inbox.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-              <input 
-                type="email" 
-                placeholder="Enter your email address"
-                className="input input-bordered flex-1 focus:input-primary bg-base-100"
-              />
-              <button className="btn bg-gradient-to-r from-primary to-secondary text-primary-content border-none hover:shadow-lg">
-                <span className="mr-2">🚀</span>
-                Subscribe
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+
       
       {/* Bottom Footer */}
       <div className="bg-base-100 border-t border-base-300 py-6">

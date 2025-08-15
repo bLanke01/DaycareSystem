@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import Image from 'next/image';
 
 export default function NotificationHistory({ userId, userRole }) {
   const [notifications, setNotifications] = useState([]);
@@ -90,17 +91,18 @@ export default function NotificationHistory({ userId, userRole }) {
 
   const getNotificationIcon = (type) => {
     const iconMap = {
-      'new_event': '📅',
-      'admin_new_event': '📅',
-      'parent_new_event': '📅',
-      'new_invoice': '💰',
-      'invoice_paid': '✅',
-      'payment_confirmation': '✅',
-      'system_alert': '🚨',
-      'general': '📧'
+      'new_message': <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} />,
+      'new_event': <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} />,
+      'admin_new_event': <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} />,
+      'parent_new_event': <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} />,
+      'new_invoice': <Image src="/Emojis/Enroll_emoji-Photoroom.png" alt="Enroll Emoji" width={24} height={24} />,
+      'invoice_paid': <Image src="/Emojis/Star_emoji-Photoroom.png" alt="Star Emoji" width={24} height={24} />,
+      'payment_confirmation': <Image src="/Emojis/Star_emoji-Photoroom.png" alt="Star Emoji" width={24} height={24} />,
+      'system_alert': <Image src="/Emojis/Security_emoji-Photoroom.png" alt="Security Emoji" width={24} height={24} />,
+      'general': <Image src="/Emojis/Email_emoji-Photoroom.png" alt="Email Emoji" width={24} height={24} />
     };
     
-    return iconMap[type] || '📧';
+    return iconMap[type] || <Image src="/Emojis/Email_emoji-Photoroom.png" alt="Email Emoji" width={24} height={24} />;
   };
 
   const getNotificationTypeLabel = (type) => {
@@ -199,19 +201,11 @@ export default function NotificationHistory({ userId, userRole }) {
                   onChange={(e) => setFilter(e.target.value)}
                 >
                   <option value="all">All Types</option>
-                  <option value="event">📅 Calendar Events</option>
-                  {userRole === 'parent' && (
-                    <>
-                      <option value="invoice">💰 Invoices</option>
-                      <option value="payment">✅ Payments</option>
-                    </>
-                  )}
-                  {userRole === 'admin' && (
-                    <>
-                      <option value="admin">🔧 Admin Notifications</option>
-                      <option value="system">🚨 System Alerts</option>
-                    </>
-                  )}
+                  <option value="message">Contact Emoji Messages</option>
+                  <option value="event">Calendar Emoji Calendar Events</option>
+                  <option value="invoice">Enroll Emoji Invoices</option>
+                  <option value="payment">Star Emoji Payments</option>
+                  <option value="system">Security Emoji System Alerts</option>
                 </select>
               </div>
             </div>

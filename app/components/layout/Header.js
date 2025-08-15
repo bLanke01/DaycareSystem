@@ -27,7 +27,7 @@ const Header = () => {
   ];
 
   return (
-    <div className={`navbar bg-base-100/90 backdrop-blur-md shadow-lg sticky top-0 z-50 transition-all duration-300 ${
+    <div className={`navbar bg-base-100 shadow-lg sticky top-0 z-50 transition-all duration-300 ${
       isScrolled ? 'py-2' : 'py-4'
     }`}>
       <div className="navbar-start">

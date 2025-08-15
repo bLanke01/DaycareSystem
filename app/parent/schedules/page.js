@@ -11,6 +11,7 @@ import parse from "date-fns/parse";
 import startOfWeek from "date-fns/startOfWeek";
 import getDay from "date-fns/getDay";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import Image from 'next/image';
 
 const locales = {
   "en-US": require("date-fns/locale/en-US"),
@@ -26,12 +27,12 @@ const localizer = dateFnsLocalizer({
 
 // Event categories with colors and emojis (same as admin)
 const eventCategories = [
-  { id: 'meeting', name: 'Meeting', color: '#3B82F6', emoji: '📅', bgColor: '#EFF6FF' },
+  { id: 'meeting', name: 'Meeting', color: '#3B82F6', emoji: <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} />, bgColor: '#EFF6FF' },
   { id: 'training', name: 'Training', color: '#10B981', emoji: '📚', bgColor: '#ECFDF5' },
-  { id: 'event', name: 'Special Event', color: '#F59E0B', emoji: '🎉', bgColor: '#FFFBEB' },
+  { id: 'event', name: 'Special Event', color: '#F59E0B', emoji: <Image src="/Emojis/Balloon_emoji-Photoroom.png" alt="Balloon Emoji" width={24} height={24} />, bgColor: '#FFFBEB' },
   { id: 'holiday', name: 'Holiday', color: '#EF4444', emoji: '🏖️', bgColor: '#FEF2F2' },
   { id: 'maintenance', name: 'Maintenance', color: '#8B5CF6', emoji: '🔧', bgColor: '#F5F3FF' },
-  { id: 'activity', name: 'Activity', color: '#EC4899', emoji: '🎨', bgColor: '#FDF2F8' },
+  { id: 'activity', name: 'Activity', color: '#EC4899', emoji: <Image src="/Emojis/art_emoji-Photoroom.png" alt="Art Emoji" width={24} height={24} />, bgColor: '#FDF2F8' },
   { id: 'field-trip', name: 'Field Trip', color: '#06B6D4', emoji: '🚌', bgColor: '#ECFEFF' },
   { id: 'parent-meeting', name: 'Parent Meeting', color: '#84CC16', emoji: '👨‍👩‍👧‍👦', bgColor: '#F7FEE7' }
 ];
@@ -249,9 +250,10 @@ export default function ParentSchedules() {
       <div className="max-w-7xl mx-auto">
         {/* Header section */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold mb-6 text-gray-800 flex items-center gap-3">
-            📅 <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Your Child's Schedule & Calendar</span>
-          </h1>
+          <div className="text-center mb-8">
+            <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={48} height={48} className="inline-block mr-2" />
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Your Child's Schedule & Calendar</span>
+          </div>
           <p className="text-lg text-gray-600 mb-4">
             View all scheduled events, activities, and important dates for your child
           </p>
@@ -294,11 +296,11 @@ export default function ParentSchedules() {
 
         {/* Event Details Modal */}
         {selectedEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 w-[400px] shadow-2xl transform transition-all duration-300">
               <div className="text-center mb-6">
                 <div className="text-4xl mb-3">
-                  {eventCategories.find(cat => cat.id === selectedEvent.category)?.emoji || '📅'}
+                  {eventCategories.find(cat => cat.id === selectedEvent.category)?.emoji || <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} />}
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Event Details</h2>
                 <div 

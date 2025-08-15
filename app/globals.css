@@ -149,7 +149,7 @@ html, body {
   }
 
   .drawer-overlay {
-    @apply bg-black/50 backdrop-blur-sm;
+    @apply bg-black/50;
   }
 
   /* Better breadcrumb styling */
@@ -193,6 +193,43 @@ html, body {
   /* Optimized card body spacing */
   .card-body {
     @apply p-4 lg:p-6;
+  }
+  
+  /* Ensure main content areas have crisp text */
+  main {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Dashboard content clarity */
+  .dashboard-content {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-weight: 400;
+    letter-spacing: 0.01em;
+  }
+  
+  /* Ensure text clarity in all dashboard elements */
+  .dashboard-content h1,
+  .dashboard-content h2,
+  .dashboard-content h3,
+  .dashboard-content p,
+  .dashboard-content span,
+  .dashboard-content div {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Optimize font rendering for statistics and numbers */
+  .stat-value,
+  .stat-title {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-weight: 600;
   }
 
   .card-body.compact {

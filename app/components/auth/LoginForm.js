@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '../../firebase/auth-context';
 import { getDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -196,7 +197,7 @@ const LoginForm = () => {
           </button>
           
           <div className="text-sm text-center mb-6">
-            <p>🔒 Google sign-in is only for existing accounts. 
+            <p><Image src="/Emojis/Security_emoji-Photoroom.png" alt="Security Emoji" width={20} height={20} className="inline-block mr-1" /> Google sign-in is only for existing accounts. 
             {userType === 'admin' ? (
               <span> Admins can link Google accounts in Settings after logging in.</span>
             ) : (

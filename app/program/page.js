@@ -1,4 +1,7 @@
 // app/program/page.js
+'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -115,15 +118,15 @@ export default function Program() {
 
   const dailySchedule = [
     { time: '7:00 - 8:30 AM', activity: 'Arrival & Free Play', emoji: '🌅' },
-    { time: '8:30 - 9:00 AM', activity: 'Breakfast & Circle Time', emoji: '🥣' },
-    { time: '9:00 - 10:30 AM', activity: 'Learning Activities', emoji: '📚' },
-    { time: '10:30 - 11:00 AM', activity: 'Snack & Outdoor Play', emoji: '🍎' },
-    { time: '11:00 - 12:00 PM', activity: 'Structured Activities', emoji: '🎯' },
-    { time: '12:00 - 1:00 PM', activity: 'Lunch Time', emoji: '🍽️' },
-    { time: '1:00 - 3:00 PM', activity: 'Quiet Time & Naps', emoji: '😴' },
-    { time: '3:00 - 3:30 PM', activity: 'Afternoon Snack', emoji: '🧀' },
-    { time: '3:30 - 5:00 PM', activity: 'Creative Play & Centers', emoji: '🎨' },
-    { time: '5:00 - 6:00 PM', activity: 'Free Play & Pickup', emoji: '👋' }
+          { time: '8:30 - 9:00 AM', activity: 'Breakfast & Circle Time', emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} /> },
+      { time: '9:00 - 10:30 AM', activity: 'Learning Activities', emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} /> },
+    { time: '10:30 - 11:00 AM', activity: 'Snack & Outdoor Play', emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} /> },
+    { time: '11:00 - 12:00 PM', activity: 'Structured Activities', emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} /> },
+    { time: '12:00 - 1:00 PM', activity: 'Lunch & Cleanup', emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} /> },
+    { time: '1:00 - 3:00 PM', activity: 'Quiet Time & Naps', emoji: <Image src="/Emojis/TeddyBear_emoji-Photoroom.png" alt="Teddy Bear Emoji" width={24} height={24} /> },
+    { time: '3:00 - 3:30 PM', activity: 'Afternoon Snack', emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} /> },
+    { time: '3:30 - 5:00 PM', activity: 'Creative Play & Centers', emoji: <Image src="/Emojis/art_emoji-Photoroom.png" alt="Art Emoji" width={24} height={24} /> },
+          { time: '5:00 - 6:00 PM', activity: 'Free Play & Pickup', emoji: <Image src="/Emojis/Heart_emoji-Photoroom.png" alt="Heart Emoji" width={24} height={24} /> }
   ];
 
   return (
@@ -134,7 +137,8 @@ export default function Program() {
           <div className="max-w-4xl">
             <h1 className="text-6xl font-bold text-primary mb-6">
               TinyLog's Amazing Programs 
-              <span className="text-4xl ml-2">🌟📚</span>
+              <Image src="/Emojis/Star_emoji-Photoroom.png" alt="Star Emoji" width={48} height={48} className="ml-2" />
+              <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={48} height={48} className="ml-2" />
             </h1>
             <p className="text-2xl text-base-content leading-relaxed mb-8">
               Thoughtfully designed programs for every stage of your child's development. 
@@ -143,13 +147,13 @@ export default function Program() {
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/contact">
                 <button className="btn btn-primary btn-lg">
-                  <span className="text-xl mr-2">📅</span>
+                  <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} className="mr-2" />
                   Schedule a Tour
                 </button>
               </Link>
               <Link href="/auth/signup">
                 <button className="btn btn-secondary btn-lg">
-                  <span className="text-xl mr-2">📝</span>
+                  <Image src="/Emojis/Signup_emoji-Photoroom.png" alt="Signup Emoji" width={24} height={24} className="mr-2" />
                   Enroll Now
                 </button>
               </Link>
@@ -163,7 +167,7 @@ export default function Program() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-5xl font-bold text-primary mb-4">
-              What TinyLog Believes <span className="text-4xl">💫</span>
+              What TinyLog Believes <Image src="/Emojis/Star_emoji-Photoroom.png" alt="Star Emoji" width={48} height={48} className="inline-block" />
             </h2>
             <p className="text-xl text-base-content max-w-3xl mx-auto">
               Our philosophy is built on the foundation that every child is unique, capable, and deserves 
@@ -315,14 +319,14 @@ export default function Program() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { name: 'Story Time', emoji: '📚', description: 'Daily reading sessions with favorite books and stories' },
-              { name: 'Arts & Crafts', emoji: '🎨', description: 'Simple creative projects with safe materials' },
-              { name: 'Outdoor Play', emoji: '🌳', description: 'Fresh air and physical activity in our playground' },
-              { name: 'Music & Songs', emoji: '🎵', description: 'Singing, dancing, and simple musical instruments' },
-              { name: 'Snack Helpers', emoji: '🍎', description: 'Children help prepare and serve healthy snacks' },
-              { name: 'Show & Tell', emoji: '🗣️', description: 'Weekly sharing time to build confidence' },
-              { name: 'Puzzle Time', emoji: '🧩', description: 'Age-appropriate puzzles and matching games' },
-              { name: 'Circle Time', emoji: '⭕', description: 'Group discussions and learning activities together' }
+                              { name: 'Story Time', emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} />, description: 'Daily reading sessions with favorite books and stories' },
+              { name: 'Arts & Crafts', emoji: <Image src="/Emojis/art_emoji-Photoroom.png" alt="Art Emoji" width={24} height={24} />, description: 'Simple creative projects with safe materials' },
+                              { name: 'Outdoor Play', emoji: <Image src="/Emojis/Running_Emoji-Photoroom.png" alt="Running Emoji" width={24} height={24} />, description: 'Fresh air and physical activity in our playground' },
+              { name: 'Music & Movement', emoji: <Image src="/Emojis/Running_Emoji-Photoroom.png" alt="Running Emoji" width={24} height={24} />, description: 'Singing, dancing, and musical instruments' },
+              { name: 'Snack Helpers', emoji: <Image src="/Emojis/Apple_emoji-Photoroom.png" alt="Apple Emoji" width={24} height={24} />, description: 'Children help prepare and serve healthy snacks' },
+                              { name: 'Show & Tell', emoji: <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} />, description: 'Weekly sharing time to build confidence' },
+                { name: 'Puzzle Time', emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} />, description: 'Age-appropriate puzzles and matching games' },
+                              { name: 'Circle Time', emoji: <Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} />, description: 'Group discussions and learning activities together' }
             ].map((activity, index) => (
               <div key={index} className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                 <div className="card-body text-center p-6">
@@ -349,18 +353,18 @@ export default function Program() {
           <div className="flex gap-6 justify-center flex-wrap">
             <Link href="/contact">
               <button className="btn btn-accent btn-lg">
-                <span className="text-xl mr-2">📅</span>
+                <Image src="/Emojis/Calendar_emoji-Photoroom.png" alt="Calendar Emoji" width={24} height={24} className="mr-2" />
                 Book a Tour
               </button>
             </Link>
             <Link href="/auth/signup">
               <button className="btn btn-outline btn-lg text-white border-white hover:bg-white hover:text-primary">
-                <span className="text-xl mr-2">📝</span>
+                <Image src="/Emojis/Signup_emoji-Photoroom.png" alt="Signup Emoji" width={24} height={24} className="mr-2" />
                 Start Enrollment
               </button>
             </Link>
             <a href="tel:+14035551234" className="btn btn-ghost btn-lg text-white hover:bg-white/20">
-              <span className="text-xl mr-2"><Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Photo" width={30} height={30}></Image></span>
+              <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} className="mr-2" />
               Call Us Today
             </a>
           </div>

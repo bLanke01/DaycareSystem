@@ -189,7 +189,7 @@ const AdminDashboardLayout = ({ children }) => {
                 </button>
                 <ul 
                   tabIndex={0} 
-                  className="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-2xl bg-gradient-to-br from-base-100 to-base-200 rounded-xl w-64 border border-base-300 backdrop-blur-sm"
+                  className="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-2xl bg-gradient-to-br from-base-100 to-base-200 rounded-xl w-64 border border-base-300"
                   role="menu"
                   aria-label="User account menu"
                 >
@@ -258,7 +258,7 @@ const AdminDashboardLayout = ({ children }) => {
           {/* Main Content */}
           <main className="flex-1 p-4 lg:p-6" role="main" id="main-content">
             {/* Page Content with enhanced styling */}
-            <div className="bg-base-100 rounded-xl shadow-lg border border-base-300 p-6 min-h-[calc(100vh-16rem)]">
+            <div className="bg-base-100 rounded-xl shadow-lg border border-base-300 p-6 min-h-[calc(100vh-16rem)] dashboard-content">
               {children}
             </div>
           </main>
