@@ -215,7 +215,10 @@ const SignupForm = () => {
       
       // Provide specific error messages
       if (err.code === 'auth/email-already-in-use') {
-        setError('This email is already registered. Try logging in instead.');
+        setError(
+          'This email is already registered. Please try logging in instead with your email and password. ' +
+          'After logging in, you can link your Google account in settings if desired.'
+        );
       } else if (err.code === 'auth/weak-password') {
         setError('Password is too weak. Please use at least 6 characters with numbers and letters.');
       } else if (err.code === 'auth/invalid-email') {

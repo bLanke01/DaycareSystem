@@ -75,7 +75,13 @@ export default function AdminPaymentsPage() {
   // Add the isOverdue function
   const isOverdue = (payment) => {
     if (payment.status === "paid") return false;
-    const today = new Date().toISOString().split("T")[0];
+    const today = (() => {
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })();
     return payment.dueDate < today;
   };
 
@@ -377,50 +383,109 @@ export default function AdminPaymentsPage() {
     }
   };
 
-  // Handler for Parent UID input
-  async function handleParentUidChange(e) {
-    const uid = e.target.value.trim();
-    setNewInvoice((prev) => ({ ...prev, userUID: uid }));
+  // Handler for Parent Name input with debouncing
+  async function handleParentNameChange(e) {
+    const name = e.target.value;
+    setNewInvoice((prev) => ({ ...prev, parentName: name }));
     setUidWarning("");
-    setUidLoading(true);
-    if (!uid) {
+    
+    // Clear search timeout if user is still typing
+    if (window.parentSearchTimeout) {
+      clearTimeout(window.parentSearchTimeout);
+    }
+    
+    // If name is empty, clear everything immediately
+    if (!name.trim()) {
       setNewInvoice((prev) => ({
         ...prev,
-        parentName: "",
         paymentEmail: "",
+        userUID: "",
       }));
       setUidLoading(false);
       return;
     }
-    try {
-      // Now using "users" collection
-      const userDoc = await getDoc(doc(db, "users", uid));
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setNewInvoice((prev) => ({
-          ...prev,
-          parentName: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
-          paymentEmail: data.email || "", // <-- Only use the root "email" field
-        }));
-        setUidWarning("");
-      } else {
-        setNewInvoice((prev) => ({
-          ...prev,
-          parentName: "",
-          paymentEmail: "",
-        }));
-        setUidWarning("Not an existing parent UID!");
-      }
-    } catch {
-      setUidWarning("Not an existing parent UID!");
-      setNewInvoice((prev) => ({
-        ...prev,
-        parentName: "",
-        paymentEmail: "",
-      }));
-    } finally {
+    
+    // Only search if name is at least 2 characters
+    if (name.trim().length < 2) {
       setUidLoading(false);
+      return;
     }
+    
+    setUidLoading(true);
+    
+    // Debounce the search by 500ms
+    window.parentSearchTimeout = setTimeout(async () => {
+      try {
+        // Search for parent by name in the "users" collection
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        let foundParents = [];
+        
+        usersSnapshot.forEach((doc) => {
+          const userData = doc.data();
+          if (userData.role !== 'parent') return;
+          
+          const fullName = `${userData.firstName || ""} ${userData.lastName || ""}`.trim();
+          const searchName = name.trim().toLowerCase();
+          const fullNameLower = fullName.toLowerCase();
+          
+          // More flexible matching: exact match, starts with, or contains
+          let matchScore = 0;
+          if (fullNameLower === searchName) {
+            matchScore = 3; // Exact match
+          } else if (fullNameLower.startsWith(searchName)) {
+            matchScore = 2; // Starts with
+          } else if (fullNameLower.includes(searchName)) {
+            matchScore = 1; // Contains
+          }
+          
+          if (matchScore > 0) {
+            foundParents.push({
+              uid: doc.id,
+              ...userData,
+              fullName: fullName,
+              matchScore: matchScore
+            });
+          }
+        });
+        
+        // Sort by match score (best matches first)
+        foundParents.sort((a, b) => b.matchScore - a.matchScore);
+        
+        if (foundParents.length > 0) {
+          const bestMatch = foundParents[0];
+          setNewInvoice((prev) => ({
+            ...prev,
+            parentName: bestMatch.fullName,
+            paymentEmail: bestMatch.email || "",
+            userUID: bestMatch.uid,
+          }));
+          setUidWarning("");
+          
+          // If multiple matches, show a helpful message
+          if (foundParents.length > 1) {
+            setUidWarning(`Found ${foundParents.length} matches. Using: ${bestMatch.fullName}`);
+          }
+        } else {
+          // If no match found, clear the UID and email but keep the typed name
+          setNewInvoice((prev) => ({
+            ...prev,
+            paymentEmail: "",
+            userUID: "",
+          }));
+          setUidWarning("Parent not found in database. Please check the name or enter details manually.");
+        }
+      } catch (error) {
+        console.error("Error searching for parent:", error);
+        setUidWarning("Error searching for parent. Please enter details manually.");
+        setNewInvoice((prev) => ({
+          ...prev,
+          paymentEmail: "",
+          userUID: "",
+        }));
+      } finally {
+        setUidLoading(false);
+      }
+    }, 500);
   }
 
   // Add validation function
@@ -800,10 +865,13 @@ export default function AdminPaymentsPage() {
                   TinyLog Daycare
                 </div>
                 <div style={{ fontSize: "0.95em", color: "#555" }}>
-                  123 Main St, City, State
+                  21 Everdige Court SW
                 </div>
                 <div style={{ fontSize: "0.95em", color: "#555" }}>
-                  info@tinylog.com
+                  Calgary, Alberta
+                </div>
+                <div style={{ fontSize: "0.95em", color: "#555" }}>
+                  (403) 542-5531
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
@@ -1170,8 +1238,7 @@ export default function AdminPaymentsPage() {
               </div>
               <div>
                 Please pay by the due date. For questions, contact us at{" "}
-                <a href="mailto:info@tinylog.com">info@tinylog.com</a> or{" "}
-                <a href="tel:+15551234567">(555) 123-4567</a>.
+                <a href="tel:+14035425531">(403) 542-5531</a>.
               </div>
               <div
                 style={{
@@ -1593,12 +1660,12 @@ export default function AdminPaymentsPage() {
             )}
             <div style={{ marginBottom: 12 }}>
               <label>
-                Parent UID:
+                Parent Name:
                 <br />
                 <input
                   type="text"
-                  value={newInvoice.userUID || ""}
-                  onChange={handleParentUidChange}
+                  value={newInvoice.parentName}
+                  onChange={handleParentNameChange}
                   style={{
                     width: "100%",
                     padding: "0.5rem",
@@ -1607,17 +1674,28 @@ export default function AdminPaymentsPage() {
                     borderRadius: 4,
                     marginTop: 4,
                   }}
-                  placeholder="Paste the parent's UID here"
+                  placeholder="Enter parent's full name (e.g., John Smith)"
                 />
                 {uidWarning && (
                   <div
                     style={{
-                      color: "red",
+                      color: uidWarning.includes("not found") ? "#ff9800" : "red",
                       marginTop: 4,
                       fontWeight: 500,
                     }}
                   >
                     {uidWarning}
+                  </div>
+                )}
+                {newInvoice.userUID && !uidWarning && (
+                  <div
+                    style={{
+                      color: "#28a745",
+                      marginTop: 4,
+                      fontWeight: 500,
+                    }}
+                  >
+                    ✓ Parent found in database
                   </div>
                 )}
               </label>
@@ -1629,32 +1707,9 @@ export default function AdminPaymentsPage() {
                     fontWeight: 500,
                   }}
                 >
-                  Looking up parent info...
+                  Searching for parent...
                 </div>
               )}
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label>
-                Parent Name:
-                <br />
-                <input
-                  type="text"
-                  value={newInvoice.parentName}
-                  onChange={(e) =>
-                    setNewInvoice({ ...newInvoice, parentName: e.target.value })
-                  }
-                  style={{
-                    width: "100%",
-                    padding: "0.5rem",
-                    background: "#f5f5f5",
-                    border: "1px solid #ccc",
-                    borderRadius: 4,
-                    marginTop: 4,
-                  }}
-                  placeholder="Enter parent's full name"
-                  disabled={!!newInvoice.userUID && !uidWarning}
-                />
-              </label>
             </div>
             <div style={{ marginBottom: 12 }}>
               <label>
@@ -1672,16 +1727,39 @@ export default function AdminPaymentsPage() {
                   style={{
                     width: "100%",
                     padding: "0.5rem",
-                    background: "#f5f5f5",
+                    background: newInvoice.userUID && !uidWarning ? "#e8f5e8" : "#f5f5f5",
                     border: "1px solid #ccc",
                     borderRadius: 4,
                     marginTop: 4,
                   }}
-                  placeholder="Enter parent's email address"
+                  placeholder={newInvoice.userUID && !uidWarning ? "Auto-filled from database" : "Enter parent's email address"}
                   disabled={!!newInvoice.userUID && !uidWarning}
                 />
               </label>
             </div>
+            {newInvoice.userUID && !uidWarning && (
+              <div style={{ marginBottom: 12 }}>
+                <label>
+                  Parent UID (Auto-detected):
+                  <br />
+                  <input
+                    type="text"
+                    value={newInvoice.userUID}
+                    readOnly
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem",
+                      background: "#e8f5e8",
+                      border: "1px solid #28a745",
+                      borderRadius: 4,
+                      marginTop: 4,
+                      color: "#155724",
+                      fontFamily: "monospace",
+                    }}
+                  />
+                </label>
+              </div>
+            )}
             <div style={{ marginBottom: 12 }}>
               <label>
                 Due Date:

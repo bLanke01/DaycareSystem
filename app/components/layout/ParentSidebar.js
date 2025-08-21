@@ -31,11 +31,7 @@ const ParentSidebar = ({ isOpen, onClose }) => {
       path: '/parent/messages',
       icon: <Image src="/Emojis/Contact_emoji-Photoroom.png" alt="Contact Emoji" width={24} height={24} />
     },
-    {
-      title: 'Accounts',
-      path: '/parent/accounts',
-      icon: <Image src="/Emojis/Staff_emoji-Photoroom.png" alt="Staff Emoji" width={24} height={24} />
-    },
+
     {
       title: 'Invoices',
       path: '/parent/invoices',

@@ -20,12 +20,48 @@ export default function NapTrackingPage() {
   const [napSessions, setNapSessions] = useState({});
   const [napHistory, setNapHistory] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Fix date issue by using local date instead of UTC
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [activeView, setActiveView] = useState('live');
   const [error, setError] = useState('');
 
-  // Live nap tracking state
-  const [activeNaps, setActiveNaps] = useState(new Map());
+  // Live nap tracking state with persistence
+  const [activeNaps, setActiveNaps] = useState(() => {
+    // Initialize from localStorage if available
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('activeNaps');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // Convert back to Map and ensure data is still valid (within 24 hours)
+          const now = new Date();
+          const activeMap = new Map();
+          
+          Object.entries(parsed).forEach(([childId, napData]) => {
+            const startTime = new Date(napData.startTime);
+            const hoursDiff = (now - startTime) / (1000 * 60 * 60);
+            
+            // Only restore if nap started within the last 24 hours
+            if (hoursDiff < 24 && napData.status === 'sleeping') {
+              activeMap.set(childId, napData);
+            }
+          });
+          
+          return activeMap;
+        }
+      } catch (error) {
+        console.warn('Failed to load active naps from localStorage:', error);
+      }
+    }
+    return new Map();
+  });
+  
   const [napTimers, setNapTimers] = useState(new Map());
 
   // Schedule state
@@ -43,6 +79,22 @@ export default function NapTrackingPage() {
   });
 
   const sleepQualityOptions = ['excellent', 'good', 'fair', 'restless', 'difficult'];
+
+  // Persist active naps to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && activeNaps.size > 0) {
+      try {
+        // Convert Map to object for storage
+        const activeNapsObj = Object.fromEntries(activeNaps);
+        localStorage.setItem('activeNaps', JSON.stringify(activeNapsObj));
+      } catch (error) {
+        console.warn('Failed to save active naps to localStorage:', error);
+      }
+    } else if (typeof window !== 'undefined' && activeNaps.size === 0) {
+      // Clear localStorage when no active naps
+      localStorage.removeItem('activeNaps');
+    }
+  }, [activeNaps]);
 
   // Load children and nap data with improved error handling
   useEffect(() => {
@@ -63,7 +115,13 @@ export default function NapTrackingPage() {
 
         // Load today's nap sessions - using simpler query
         try {
-          const today = new Date().toISOString().split('T')[0];
+          const today = (() => {
+            const date = new Date();
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          })();
           const napSessionsSnapshot = await getDocs(collection(db, 'napSessions'));
           
           const sessionsData = {};
@@ -71,18 +129,57 @@ export default function NapTrackingPage() {
           
           napSessionsSnapshot.forEach(doc => {
             const data = doc.data();
-            // Filter by today's date in memory since Firestore queries might be causing issues
-            if (data.date && data.date.includes(today)) {
-              sessionsData[data.childId] = data;
-              if (data.status === 'sleeping') {
-                activeNapsMap.set(data.childId, data);
+            // Filter by today's date - handle both ISO and local date formats
+            if (data.date) {
+              let matchesDate = false;
+              
+              // Check if date matches today (handle both ISO strings and local date strings)
+              if (data.date.includes(today)) {
+                matchesDate = true;
+              } else if (data.date.length === 10 && data.date === today) {
+                // Exact match for YYYY-MM-DD format
+                matchesDate = true;
+              }
+              
+              if (matchesDate) {
+                sessionsData[data.childId] = data;
+                if (data.status === 'sleeping') {
+                  activeNapsMap.set(data.childId, data);
+                }
               }
             }
           });
           
           console.log(`Loaded ${Object.keys(sessionsData).length} nap sessions`);
           setNapSessions(sessionsData);
-          setActiveNaps(activeNapsMap);
+          
+          // Merge database active naps with localStorage active naps, giving priority to database
+          setActiveNaps(prev => {
+            const mergedMap = new Map(prev); // Start with localStorage data
+            
+            // Override with database data (more authoritative)
+            activeNapsMap.forEach((value, key) => {
+              mergedMap.set(key, value);
+            });
+            
+            // Remove any localStorage entries that aren't in the database anymore
+            const dbChildIds = new Set(activeNapsMap.keys());
+            for (const [childId] of prev) {
+              if (!dbChildIds.has(childId)) {
+                // Check if this nap is still valid (less than 24 hours old)
+                const napData = prev.get(childId);
+                if (napData && napData.startTime) {
+                  const startTime = new Date(napData.startTime);
+                  const hoursDiff = (new Date() - startTime) / (1000 * 60 * 60);
+                  if (hoursDiff >= 24) {
+                    mergedMap.delete(childId);
+                  }
+                }
+              }
+            }
+            
+            return mergedMap;
+          });
         } catch (sessionError) {
           console.warn('Could not load nap sessions:', sessionError);
           // Continue without nap sessions
@@ -95,9 +192,21 @@ export default function NapTrackingPage() {
           
           historySnapshot.forEach(doc => {
             const data = doc.data();
-            // Filter by selected date in memory
-            if (data.date && data.date.includes(selectedDate)) {
-              historyData.push({ id: doc.id, ...data });
+            // Filter by selected date - handle both ISO and local date formats
+            if (data.date) {
+              let matchesDate = false;
+              
+              // Check if date matches selected date (handle both ISO strings and local date strings)
+              if (data.date.includes(selectedDate)) {
+                matchesDate = true;
+              } else if (data.date.length === 10 && data.date === selectedDate) {
+                // Exact match for YYYY-MM-DD format
+                matchesDate = true;
+              }
+              
+              if (matchesDate) {
+                historyData.push({ id: doc.id, ...data });
+              }
             }
           });
           
@@ -146,13 +255,22 @@ export default function NapTrackingPage() {
   const startNap = async (child, napType = 'regular') => {
     try {
       const napSessionId = `${child.id}_${Date.now()}`;
-      const startTime = new Date().toISOString();
+      const now = new Date();
+      const startTime = now.toISOString();
+      
+      // Create date string in YYYY-MM-DD format using local time to avoid timezone issues
+      const localDateStr = (() => {
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      })();
       
       const napSessionData = {
         id: napSessionId,
         childId: child.id,
         childName: `${child.firstName} ${child.lastName}`,
-        date: startTime,
+        date: localDateStr, // Use local date string instead of ISO
         startTime: startTime,
         napType: napType,
         status: 'sleeping',
@@ -183,9 +301,18 @@ export default function NapTrackingPage() {
       const activeNap = activeNaps.get(child.id) || napSessions[child.id];
       if (!activeNap) return;
       
-      const endTime = new Date().toISOString();
+      const now = new Date();
+      const endTime = now.toISOString();
       const startTime = new Date(activeNap.startTime);
       const duration = Math.floor((new Date(endTime) - startTime) / 1000 / 60);
+      
+      // Create date string in YYYY-MM-DD format using local time to avoid timezone issues
+      const localDateStr = (() => {
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      })();
       
       // Update nap session
       await updateDoc(doc(db, 'napSessions', activeNap.id), {
@@ -203,7 +330,7 @@ export default function NapTrackingPage() {
         id: napHistoryId,
         childId: child.id,
         childName: `${child.firstName} ${child.lastName}`,
-        date: endTime,
+        date: localDateStr, // Use local date string instead of ISO
         startTime: new Date(activeNap.startTime).toTimeString().slice(0, 5),
         endTime: new Date(endTime).toTimeString().slice(0, 5),
         duration: duration,
@@ -245,7 +372,13 @@ export default function NapTrackingPage() {
 
   // Calculate total nap time for a child today
   const getTodayNapTime = (childId) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = (() => {
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })();
     const todayNaps = napHistory.filter(nap => 
       nap.childId === childId && 
       nap.date.includes(today)
@@ -370,7 +503,13 @@ export default function NapTrackingPage() {
               <div className="stat-title">Naps Today</div>
               <div className="stat-value">
                 {napHistory.filter(nap => 
-                  nap.date.includes(new Date().toISOString().split('T')[0])
+                  nap.date.includes((() => {
+                    const date = new Date();
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                  })())
                 ).length}
               </div>
             </div>
@@ -551,7 +690,11 @@ export default function NapTrackingPage() {
         <div className="space-y-6">
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
-              <h2 className="card-title"><Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} className="mr-2" /> Sleep History - {new Date(selectedDate).toLocaleDateString()}</h2>
+              <h2 className="card-title"><Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={24} height={24} className="mr-2" /> Sleep History - {(() => {
+                const dateParts = selectedDate.split('-');
+                const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+                return localDate.toLocaleDateString();
+              })()}</h2>
 
               {napHistory.length === 0 ? (
                 <div className="text-center py-8">
@@ -636,11 +779,7 @@ export default function NapTrackingPage() {
             </div>
           </div>
 
-          <div className="flex justify-center gap-4">
-                    <button className="btn btn-outline"><Image src="/Emojis/Enroll_emoji-Photoroom.png" alt="Enroll Emoji" width={20} height={20} className="mr-1" /> Generate Sleep Report</button>
-        <button className="btn btn-outline"><Image src="/Emojis/Email_emoji-Photoroom.png" alt="Email Emoji" width={20} height={20} className="mr-1" /> Email to Parents</button>
-        <button className="btn btn-outline"><Image src="/Emojis/Programs_emoji-Photoroom.png" alt="Programs Emoji" width={20} height={20} className="mr-1" /> Weekly Analysis</button>
-          </div>
+
         </div>
       )}
     </div>

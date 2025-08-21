@@ -1,212 +1,239 @@
-// components/admin/AdminGoogleAccountLinking.js
+// app/components/admin/AdminGoogleAccountLinking.js
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  GoogleAuthProvider, 
-  linkWithPopup, 
-  unlink, 
-  onAuthStateChanged,
-  fetchSignInMethodsForEmail 
-} from 'firebase/auth';
-import { auth } from '../../firebase/config';
+import { useAuth } from '../../firebase/auth-context';
 
-const AdminGoogleAccountLinking = () => {
+export default function AdminGoogleAccountLinking() {
+  const { user, hasGoogleLinked, disableGoogleSignIn, enableGoogleSignIn, logOut } = useAuth();
   const [isLinked, setIsLinked] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
-  const [showConfirmUnlink, setShowConfirmUnlink] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setIsLinked(false);
-        setLoading(false);
+    if (user?.uid) {
+      checkGoogleLinkStatus();
+    }
+  }, [user, hasGoogleLinked]);
+
+  // Monitor user provider data changes
+  useEffect(() => {
+    if (user?.uid) {
+      const currentProviders = user.providerData?.map(p => p.providerId) || [];
+      console.log('👀 Admin user provider data changed:', currentProviders);
+      
+      // Check if Google provider is present
+      const hasGoogle = currentProviders.includes('google.com');
+      console.log('🔍 Admin Google provider present in user data:', hasGoogle);
+      
+      // Update local state if it differs from current
+      if (hasGoogle !== isLinked) {
+        console.log('🔄 Admin updating local state to match provider data:', hasGoogle);
+        setIsLinked(hasGoogle);
+      }
+    }
+  }, [user?.providerData, user?.uid]);
+
+  // Monitor for user sign-out (user becomes null)
+  useEffect(() => {
+    if (user === null) {
+      console.log('👤 Admin user signed out detected in AdminGoogleAccountLinking');
+    } else if (user?.uid) {
+      console.log('👤 Admin user signed in detected in AdminGoogleAccountLinking:', user.uid);
+    }
+  }, [user]);
+
+  const checkGoogleLinkStatus = async () => {
+    try {
+      if (!user?.uid) {
+        console.log('⚠️ No admin user UID available for checking Google link status');
         return;
       }
-      await checkGoogleLinkStatus(user);
-    });
-    return () => unsubscribe();
-  }, []);
+      
+      console.log('🔍 Checking Google link status for admin user:', user.uid);
+      const linked = await hasGoogleLinked(user.uid);
+      console.log('📊 Admin Google link status result:', linked);
+      
+      // Also check current Firebase Auth session directly for debugging
+      const currentUser = user;
+      if (currentUser) {
+        const currentProviders = currentUser.providerData?.map(p => p.providerId) || [];
+        console.log('🔍 Admin current user providers:', currentProviders);
+        console.log('🔍 Admin has Google provider in current session:', currentProviders.includes('google.com'));
+      }
+      
+      setIsLinked(linked);
+    } catch (error) {
+      console.error('❌ Error checking admin Google link status:', error);
+    }
+  };
 
-  const checkGoogleLinkStatus = async (user) => {
+  const handleGoogleLink = async () => {
+    setIsLoading(true);
+    setMessage('');
+    
     try {
-      setLoading(true);
-      setError(null);
-      // Prefer providerData for current state
-      const providerIds = (user.providerData || []).map(p => p.providerId);
-      if (providerIds.includes('google.com')) {
+      const result = await enableGoogleSignIn(user.uid);
+      if (result.success) {
         setIsLinked(true);
-      } else if (user.email) {
-        // Fallback: query sign-in methods for the email
-        const methods = await fetchSignInMethodsForEmail(auth, user.email);
-        setIsLinked(methods.includes('google.com'));
+        setMessage('Google account linked successfully! You can now sign in using Google.');
       } else {
+        setMessage('Error linking Google account: ' + (result.error?.message || 'Unknown error'));
+      }
+    } catch (error) {
+      setMessage('Error linking Google account: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleUnlink = async () => {
+    setIsLoading(true);
+    setMessage('');
+    
+    try {
+      console.log('🔗 Attempting to unlink Google account for admin user:', user.uid);
+      console.log('🔍 Admin current user provider data before unlink:', user.providerData?.map(p => p.providerId));
+      
+      const result = await disableGoogleSignIn(user.uid);
+      console.log('📊 Admin unlink result:', result);
+      
+      if (result.success) {
+        // Immediately update local state
         setIsLinked(false);
+        setMessage('Google account unlinked successfully! Google sign-in is now disabled for this account. You can continue using your email/password to sign in.');
+        
+        // Refresh the link status to ensure UI is accurate
+        console.log('✅ Admin unlinking completed, refreshing status...');
+        setTimeout(async () => {
+          try {
+            await checkGoogleLinkStatus();
+            console.log('🔄 Admin link status refreshed after unlink');
+          } catch (error) {
+            console.log('ℹ️ Could not refresh admin link status, but unlinking was successful');
+          }
+        }, 1000);
+      } else {
+        console.error('❌ Admin unlink failed with result:', result);
+        setMessage('Error unlinking Google account: ' + (result.error?.message || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error checking Google link status:', error);
-      setError('Failed to check Google account status');
+      console.error('❌ Error in admin handleGoogleUnlink:', error);
+      setMessage('Error unlinking Google account: ' + error.message);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-
-  const linkGoogleAccount = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
-
-      const provider = new GoogleAuthProvider();
-      const user = auth.currentUser;
-
-      if (!user) {
-        throw new Error('No user is currently signed in');
-      }
-
-      await linkWithPopup(user, provider);
-      setIsLinked(true);
-      setSuccess('Successfully linked Google account');
-    } catch (error) {
-      console.error('Error linking Google account:', error);
-      setError(
-        error?.code === 'auth/credential-already-in-use'
-          ? 'This Google account is already linked to another user'
-          : error?.message || 'Failed to link Google account'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const unlinkGoogleAccount = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
-
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('No user is currently signed in');
-      }
-
-      await unlink(user, 'google.com');
-      setIsLinked(false);
-      setSuccess('Successfully unlinked Google account');
-      setShowConfirmUnlink(false);
-    } catch (error) {
-      console.error('Error unlinking Google account:', error);
-      setError(error?.message || 'Failed to unlink Google account');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const confirmUnlink = () => {
-    setShowConfirmUnlink(true);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center p-4">
-        <span className="loading loading-spinner loading-md text-primary"></span>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Google Account</h3>
-
-      {error && (
-        <div className="alert alert-error">
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div className="card bg-base-100 shadow-lg">
+      <div className="card-body">
+        <h3 className="card-title text-lg mb-4">
+          <svg className="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
           </svg>
-          <span>{error}</span>
-        </div>
-      )}
+          Google Account Linking
+        </h3>
+        
+        <p className="text-base-content/70 mb-4">
+          Link your Google account to enable additional features and easier sign-in.
+        </p>
 
-      {success && (
-        <div className="alert alert-success">
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{success}</span>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between bg-base-200 p-4 rounded-lg">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-base-100 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-error" viewBox="0 0 48 48">
-              <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
-              <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
-              <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
-              <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
-            </svg>
+        {message && (
+          <div className={`alert ${message.includes('Error') ? 'alert-error' : 'alert-success'} mb-4`}>
+            <span>{message}</span>
           </div>
-          <div>
-            <h4 className="font-medium">Google Account</h4>
-            <p className="text-sm text-base-content/70">
-              {isLinked ? 'Your account is linked with Google' : 'Link your account with Google'}
-            </p>
+        )}
+
+        {/* Large centered Google icon */}
+        <div className="flex justify-center mb-6">
+          <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
+            isLinked 
+              ? 'bg-green-100 border-4 border-green-300 shadow-lg' 
+              : 'bg-base-300 border-4 border-base-200 shadow-lg'
+          }`}>
+            {isLinked ? (
+              <svg className="w-16 h-16" viewBox="0 0 24 24" fill="currentColor">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+            ) : (
+              <svg className="w-16 h-16 opacity-50" viewBox="0 0 24 24" fill="currentColor">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+            )}
           </div>
         </div>
 
-        {isLinked ? (
-          showConfirmUnlink ? (
-            <div className="join">
-              <button 
-                className="btn btn-error btn-sm join-item"
-                onClick={unlinkGoogleAccount}
-                disabled={loading}
-              >
-                Confirm Unlink
-              </button>
-              <button 
-                className="btn btn-ghost btn-sm join-item"
-                onClick={() => setShowConfirmUnlink(false)}
-                disabled={loading}
-              >
-                Cancel
-              </button>
-            </div>
-          ) : (
-            <button 
-              className="btn btn-outline btn-error btn-sm"
-              onClick={confirmUnlink}
-              disabled={loading}
+        {/* Status text centered below icon */}
+        <div className="text-center mb-6">
+          <h4 className="text-xl font-bold mb-2">
+            {isLinked ? 'Google Account Linked' : 'Google Account Not Linked'}
+          </h4>
+          <p className="text-base-content/70">
+            {isLinked 
+              ? 'Your account is connected to Google services' 
+              : 'Link your Google account for enhanced features'
+            }
+          </p>
+          
+        
+        </div>
+
+        <div className="card-actions justify-end">
+          {!isLinked ? (
+            <button
+              onClick={handleGoogleLink}
+              disabled={isLoading}
+              className="btn btn-primary"
             >
-              Unlink Account
+              {isLoading ? (
+                <span className="loading loading-spinner loading-sm"></span>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 mr-2 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  </svg>
+                  Link Google Account
+                </>
+              )}
             </button>
-          )
-        ) : (
-          <button 
-            className="btn btn-primary btn-sm"
-            onClick={linkGoogleAccount}
-            disabled={loading}
-          >
-            Link Account
-          </button>
-        )}
-      </div>
+          ) : (
+            <button
+              onClick={handleGoogleUnlink}
+              disabled={isLoading}
+              className="btn btn-outline btn-error"
+            >
+              {isLoading ? (
+                <span className="loading loading-spinner loading-sm"></span>
+              ) : (
+                'Unlink Google Account'
+              )}
+            </button>
+          )}
+        </div>
 
-      <div className="text-sm text-base-content/70">
-        {isLinked ? (
-          <p>
-            ℹ️ Your Google account is linked. You can sign in using Google.
+        <div className="mt-4 p-4 bg-base-200 rounded-lg">
+          <h4 className="font-medium mb-2">Important Note:</h4>
+          <p className="text-sm text-base-content/70">
+            When you unlink your Google account, Google sign-in will be completely disabled for this account. 
+            You will no longer be able to sign in using Google authentication. Make sure you have an alternative 
+            sign-in method (email/password) before unlinking. You will remain logged in and can continue using 
+            the application with your email/password authentication.
           </p>
-        ) : (
-          <p>
-            ℹ️ Linking your Google account allows you to sign in quickly and securely using your Google credentials.
-          </p>
-        )}
+        </div>
       </div>
     </div>
   );
-};
-
-export default AdminGoogleAccountLinking;
+}

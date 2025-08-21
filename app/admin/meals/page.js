@@ -19,14 +19,27 @@ export default function MealTrackingPage() {
   const [mealPlans, setMealPlans] = useState({});
   const [childMealRecords, setChildMealRecords] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Fix date issue by using local date instead of UTC
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [activeView, setActiveView] = useState('planning'); // 'planning', 'recording', 'reports'
   const [showMealForm, setShowMealForm] = useState(false);
   const [error, setError] = useState('');
 
   // Meal planning state
   const [newMealPlan, setNewMealPlan] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: (() => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     mealType: 'breakfast',
     mainDish: '',
     sideDish: '',
@@ -82,21 +95,38 @@ export default function MealTrackingPage() {
         });
         setMealPlans(plansData);
 
-        // Load individual meal records
-        const mealRecordsSnapshot = await getDocs(
-          query(
-            collection(db, 'childMeals'),
-            where('date', '>=', selectedDate + 'T00:00:00.000Z'),
-            where('date', '<=', selectedDate + 'T23:59:59.999Z'),
-            orderBy('date', 'desc')
-          )
-        );
-        
-        const recordsData = [];
-        mealRecordsSnapshot.forEach(doc => {
-          recordsData.push({ id: doc.id, ...doc.data() });
-        });
-        setChildMealRecords(recordsData);
+        // Load individual meal records - using simpler approach to avoid date query issues
+        try {
+          const mealRecordsSnapshot = await getDocs(collection(db, 'childMeals'));
+          
+          const recordsData = [];
+          mealRecordsSnapshot.forEach(doc => {
+            const data = doc.data();
+            // Filter by selected date - handle both ISO and local date formats
+            if (data.date) {
+              let matchesDate = false;
+              
+              // Check if date matches selected date (handle both ISO strings and local date strings)
+              if (data.date.includes(selectedDate)) {
+                matchesDate = true;
+              } else if (data.date.length === 10 && data.date === selectedDate) {
+                // Exact match for YYYY-MM-DD format
+                matchesDate = true;
+              }
+              
+              if (matchesDate) {
+                recordsData.push({ id: doc.id, ...data });
+              }
+            }
+          });
+          
+          // Sort by date
+          recordsData.sort((a, b) => new Date(b.date) - new Date(a.date));
+          setChildMealRecords(recordsData);
+        } catch (recordsError) {
+          console.warn('Could not load meal records:', recordsError);
+          setChildMealRecords([]);
+        }
 
       } catch (error) {
         console.error('Error loading meal data:', error);
@@ -163,13 +193,26 @@ export default function MealTrackingPage() {
       setLoading(true);
       
       const child = children.find(c => c.id === mealRecording.childId);
+      if (!child) {
+        throw new Error('Child not found');
+      }
+      
       const mealRecordId = `${mealRecording.childId}_${selectedDate}_${mealRecording.mealType}_${Date.now()}`;
       
+      // Create date string in YYYY-MM-DD format using local time to avoid timezone issues
+      const now = new Date();
+      const localDateStr = (() => {
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      })();
+
       const mealRecordData = {
         id: mealRecordId,
         childId: mealRecording.childId,
         childName: `${child.firstName} ${child.lastName}`,
-        date: new Date().toISOString(),
+        date: localDateStr, // Use local date string instead of ISO
         mealType: mealRecording.mealType,
         foodItems: mealRecording.foodItems.split(',').map(item => item.trim()).filter(item => item),
         amountEaten: mealRecording.amountEaten,
@@ -177,7 +220,7 @@ export default function MealTrackingPage() {
         time: mealRecording.time,
         notes: mealRecording.notes,
         recordedBy: 'admin',
-        recordedAt: new Date().toISOString()
+        recordedAt: now.toISOString()
       };
       
       await setDoc(doc(db, 'childMeals', mealRecordId), mealRecordData);
@@ -208,14 +251,18 @@ export default function MealTrackingPage() {
   const checkAllergenConflicts = (allergens) => {
     if (!allergens || allergens.length === 0) return [];
     
-    return children.filter(child => 
-      child.allergies && 
-      child.allergies.some(allergy => 
+    return children.filter(child => {
+      // Ensure child.allergies exists and is an array
+      if (!child.allergies || !Array.isArray(child.allergies)) {
+        return false;
+      }
+      
+      return child.allergies.some(allergy => 
         allergens.some(planAllergen => 
           allergy.toLowerCase().includes(planAllergen.toLowerCase())
         )
-      )
-    );
+      );
+    });
   };
 
   // Format meal time display
@@ -293,7 +340,11 @@ export default function MealTrackingPage() {
       {activeView === 'planning' && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
-            <h2 className="text-2xl font-bold">📅 Daily Meal Plan - {new Date(selectedDate).toLocaleDateString()}</h2>
+            <h2 className="text-2xl font-bold">📅 Daily Meal Plan - {(() => {
+              const dateParts = selectedDate.split('-');
+              const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+              return localDate.toLocaleDateString();
+            })()}</h2>
             <button 
               className="btn btn-primary"
               onClick={() => setShowMealForm(true)}
@@ -646,11 +697,7 @@ export default function MealTrackingPage() {
             </div>
           </div>
           
-          <div className="flex justify-center gap-4">
-            <button className="btn btn-outline">📄 Generate Daily Report</button>
-            <button className="btn btn-outline">📧 Email to Parents</button>
-            <button className="btn btn-outline">📊 Weekly Summary</button>
-          </div>
+
         </div>
       )}
 

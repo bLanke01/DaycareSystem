@@ -431,13 +431,16 @@ export default function ParentInvoicesPage() {
                     marginBottom: 2,
                   }}
                 >
-                  BrightStart Daycare
+                  TinyLog Daycare
                 </div>
                 <div style={{ fontSize: "0.95em", color: "#555" }}>
-                  123 Main St, City, State
+                  21 Everdige Court SW
                 </div>
                 <div style={{ fontSize: "0.95em", color: "#555" }}>
-                  info@brightstart.com
+                  Calgary, Alberta
+                </div>
+                <div style={{ fontSize: "0.95em", color: "#555" }}>
+                  (403) 542-5531
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
@@ -608,8 +611,7 @@ export default function ParentInvoicesPage() {
               </div>
               <div>
                 Please pay by the due date. For questions, contact us at{" "}
-                <a href="mailto:info@brightstart.com">info@brightstart.com</a>{" "}
-                or <a href="tel:+15551234567">(555) 123-4567</a>.
+                <a href="tel:+14035425531">(403) 542-5531</a>.
               </div>
               <div
                 style={{

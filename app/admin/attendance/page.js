@@ -18,7 +18,14 @@ export default function AttendancePage() {
   const [attendanceData, setAttendanceData] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Fix date issue by using local date instead of UTC
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   const [filterGroup, setFilterGroup] = useState('All');
 
   // Load children and attendance data
@@ -104,11 +111,220 @@ export default function AttendancePage() {
     }
   };
 
-  // Generate attendance sheet
-  const generateSheet = () => {
-    console.log('Generating attendance sheet for:', selectedDate);
-    console.log('Attendance data:', attendanceData);
-    alert('Attendance sheet generated! (This would export to PDF/Excel in a real implementation)');
+  // Print attendance sheet
+  const printAttendanceSheet = () => {
+    const printWindow = window.open('', '_blank');
+    // Fix date formatting by using local date instead of UTC
+    const dateParts = selectedDate.split('-');
+    const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+    const selectedDateFormatted = localDate.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Calculate stats for the selected date
+    const presentCount = filteredChildren.filter(child => attendanceData[child.id]?.status === 'present').length;
+    const lateCount = filteredChildren.filter(child => attendanceData[child.id]?.status === 'late').length;
+    const absentCount = filteredChildren.filter(child => attendanceData[child.id]?.status === 'absent').length;
+    const totalCount = filteredChildren.length;
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Attendance Sheet - ${selectedDateFormatted}</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              color: #333;
+            }
+            .header { 
+              text-align: center; 
+              border-bottom: 3px solid #2563eb; 
+              padding-bottom: 20px; 
+              margin-bottom: 30px; 
+            }
+            .header h1 {
+              margin: 0;
+              color: #2563eb;
+              font-size: 28px;
+            }
+            .header p {
+              margin: 5px 0;
+              font-size: 16px;
+              color: #666;
+            }
+            .stats {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 20px;
+              margin-bottom: 30px;
+              text-align: center;
+            }
+            .stat-card {
+              background: #f8f9fa;
+              padding: 15px;
+              border-radius: 8px;
+              border: 1px solid #e9ecef;
+            }
+            .stat-value {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .stat-label {
+              font-size: 14px;
+              color: #666;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .present { color: #16a34a; }
+            .late { color: #ea580c; }
+            .absent { color: #dc2626; }
+            .total { color: #2563eb; }
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-bottom: 30px;
+            }
+            th, td { 
+              border: 1px solid #ddd; 
+              padding: 12px 8px; 
+              text-align: left; 
+            }
+            th { 
+              background: #f8f9fa; 
+              font-weight: bold;
+              color: #333;
+            }
+            tr:nth-child(even) { 
+              background: #f9f9f9; 
+            }
+            .status-badge {
+              padding: 4px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+              font-weight: bold;
+              text-transform: uppercase;
+            }
+            .status-present { background: #dcfce7; color: #16a34a; }
+            .status-late { background: #fed7aa; color: #ea580c; }
+            .status-absent { background: #fecaca; color: #dc2626; }
+            .status-unmarked { background: #f3f4f6; color: #6b7280; }
+            .footer {
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              text-align: center;
+              color: #666;
+              font-size: 14px;
+            }
+            @media print { 
+              body { margin: 0; } 
+              .no-print { display: none; } 
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>TinyLog Daycare</h1>
+            <p><strong>Daily Attendance Sheet</strong></p>
+            <p><strong>Date:</strong> ${selectedDateFormatted}</p>
+            <p><strong>Group:</strong> ${filterGroup === 'All' ? 'All Groups' : filterGroup}</p>
+            <p><strong>Generated:</strong> ${new Date().toLocaleString()}</p>
+          </div>
+          
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-value total">${totalCount}</div>
+              <div class="stat-label">Total Children</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value present">${presentCount}</div>
+              <div class="stat-label">Present</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value late">${lateCount}</div>
+              <div class="stat-label">Late</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value absent">${absentCount}</div>
+              <div class="stat-label">Absent</div>
+            </div>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Child Name</th>
+                <th>Child ID</th>
+                <th>Age Group</th>
+                <th>Age</th>
+                <th>Status</th>
+                <th>Arrival Time</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredChildren.map((child, index) => {
+                const attendance = attendanceData[child.id];
+                const status = attendance?.status || 'unmarked';
+                const arrivalTime = attendance?.arrivalTime || '-';
+                const age = child.dateOfBirth ? (() => {
+                  const today = new Date();
+                  const birthDate = new Date(child.dateOfBirth);
+                  let age = today.getFullYear() - birthDate.getFullYear();
+                  const monthDiff = today.getMonth() - birthDate.getMonth();
+                  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                  }
+                  if (age < 1) {
+                    const ageMonths = (today.getMonth() + 12 - birthDate.getMonth()) % 12;
+                    return `${ageMonths} month${ageMonths !== 1 ? 's' : ''}`;
+                  }
+                  return `${age} year${age !== 1 ? 's' : ''}`;
+                })() : 'Unknown';
+                
+                return `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td><strong>${child.firstName} ${child.lastName}</strong></td>
+                    <td>#${child.id.slice(-6)}</td>
+                    <td>${child.group || 'N/A'}</td>
+                    <td>${age}</td>
+                    <td>
+                      <span class="status-badge status-${status}">
+                        ${status.charAt(0).toUpperCase() + status.slice(1)}
+                      </span>
+                    </td>
+                    <td>${arrivalTime}</td>
+                    <td>${attendance?.notes || ''}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          
+          <div class="footer">
+            <p>TinyLog Daycare Management System</p>
+            <p>21 Everdige Court SW, Calgary, Alberta | (403) 542-5531</p>
+          </div>
+          
+          <div class="no-print" style="text-align: center; margin-top: 40px;">
+            <button onclick="window.print()" style="padding: 12px 24px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px;">
+              Print Attendance Sheet
+            </button>
+          </div>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
   };
 
   // Filter children by group
@@ -190,12 +406,12 @@ export default function AttendancePage() {
                 </label>
                 <button 
                   className="btn btn-primary w-full"
-                  onClick={generateSheet}
+                  onClick={printAttendanceSheet}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v3h6v-3z" clipRule="evenodd" />
                   </svg>
-                  Generate Sheet
+                  Print Sheet
                 </button>
               </div>
             </div>
@@ -316,15 +532,7 @@ export default function AttendancePage() {
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end">
-          <button 
-            className={`btn btn-primary ${saving ? 'loading' : ''}`}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Submit Attendance'}
-          </button>
-        </div>
+
       </div>
     </div>
   );

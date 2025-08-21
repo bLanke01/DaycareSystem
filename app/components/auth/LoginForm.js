@@ -6,10 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '../../firebase/auth-context';
-import { getDoc, doc, updateDoc } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../../firebase/config';
 
 const LoginForm = () => {
   const router = useRouter();
@@ -25,7 +23,7 @@ const LoginForm = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -78,72 +76,26 @@ const LoginForm = () => {
       setError('');
       setGoogleLoading(true);
       
-      console.log('🔐 Attempting Google sign-in for existing users only...');
+      console.log('🔐 Attempting Google sign-in with auth context...');
       
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
+      const result = await signInWithGoogle(userType);
       
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      
-      console.log('✅ Google sign-in successful, checking if user exists...');
-      
-      // Check if this user already exists in our system
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (!userDoc.exists()) {
-        // This is a new user trying to sign in with Google - not allowed
-        console.log('❌ New user attempted Google login');
-        
-        // Sign them out immediately
-        await auth.signOut();
-        
-        throw new Error(
-          'No account found with this Google account. ' +
-          'Please sign up first using your access code, then you can link your Google account in settings.'
-        );
+      if (result.error) {
+        throw result.error;
       }
       
-      // User exists - check their role and email verification
-      const userData = userDoc.data();
+      console.log('✅ Google sign-in successful');
       
-      // Check if email is verified (for users who signed up with email/password first)
-      if (userData.signInMethods?.includes('password') && !user.emailVerified) {
-        await auth.signOut();
-        throw new Error(
-          'Please verify your email address first. Check your inbox for the verification email, ' +
-          'then try logging in with your email and password.'
-        );
-      }
-      
-      // Check role matches what they're trying to access
-      if (userData.role !== userType) {
-        await auth.signOut();
-        throw new Error(
-          `This Google account is registered as a ${userData.role === 'admin' ? 'Staff/Admin' : 'Parent'}. ` +
-          `Please use the correct login page.`
-        );
-      }
-      
-      console.log('✅ Existing user verified, logging in...');
-      
-      // Update last login
-      const userDocRef = doc(db, 'users', user.uid);
-      await updateDoc(userDocRef, {
-        lastLogin: new Date().toISOString()
-      });
-      
-      // Redirect to appropriate dashboard
+      // Navigate based on role
       if (userType === 'admin') {
         router.push('/admin');
       } else {
         router.push('/parent');
       }
       
-    } catch (err) {
-      console.error('❌ Google login error:', err);
-      setError(err.message);
+    } catch (error) {
+      console.error('❌ Google login error:', error);
+      setError(error.message);
     } finally {
       setGoogleLoading(false);
     }
@@ -273,6 +225,13 @@ const LoginForm = () => {
               Need to verify your email?{' '}
               <Link href="/auth/resend-verification" className="link link-primary">
                 Resend verification email
+              </Link>
+            </p>
+            
+            <p>
+              Forgot your password?{' '}
+              <Link href={`/auth/reset-password?type=${userType}`} className="link link-primary">
+                Reset password
               </Link>
             </p>
             

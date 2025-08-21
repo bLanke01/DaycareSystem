@@ -10,9 +10,15 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   linkWithPopup,
-  updateProfile
+  unlink,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updateProfile,
+  sendPasswordResetEmail,
+  confirmPasswordReset,
+  verifyPasswordResetCode
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, query, collection, where, getDocs, writeBatch } from 'firebase/firestore';
 import { auth, db } from './config';
 import { useRouter } from 'next/navigation';
 
@@ -150,7 +156,224 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Enhanced Google sign-in with role verification
+  // Check if user has Google linked
+  const hasGoogleLinked = async (userId = null) => {
+    try {
+      const uid = userId || user?.uid;
+      if (!uid) return false;
+      
+      // Check the current Firebase Auth session for Google provider
+      const currentUser = auth.currentUser;
+      if (currentUser && currentUser.uid === uid) {
+        const isCurrentlyGoogle = currentUser.providerData.some(provider => provider.providerId === 'google.com');
+        console.log('🔍 Current session Google provider check:', isCurrentlyGoogle);
+        
+        // If Google provider is present in session, check if it's disabled in database
+        if (isCurrentlyGoogle) {
+          const userDoc = await getDoc(doc(db, 'users', uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            if (userData.googleSignInDisabled === true) {
+              console.log('🔍 Google provider in session but disabled in database');
+              return false;
+            }
+            return true;
+          }
+          return true; // Provider exists and no database restrictions
+        }
+      }
+      
+      // If no Google provider in current session, check database only
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // Check if Google is enabled in database
+        if (userData.googleSignInDisabled !== true) {
+          const dbHasGoogle = userData.googleLinked === true || (userData.signInMethods || []).includes('google');
+          console.log('🔍 Database shows Google linked (no session provider):', dbHasGoogle);
+          return dbHasGoogle;
+        } else {
+          console.log('🔍 Google sign-in is disabled in database');
+          return false;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking Google link status:', error);
+      return false;
+    }
+  };
+
+  // Enhanced disable Google sign-in that actually prevents future sign-ins
+  const disableGoogleSignIn = async (userId = null) => {
+    try {
+      const uid = userId || user?.uid;
+      if (!uid) throw new Error('No user ID provided');
+      
+      console.log('🔗 Starting Google sign-in disable process for user:', uid);
+      
+      const userRef = doc(db, 'users', uid);
+      
+      // Check if user is currently signed in via Google
+      const currentUser = auth.currentUser;
+      console.log('👤 Current auth user:', currentUser ? currentUser.uid : 'None');
+      
+      if (currentUser && currentUser.uid === uid) {
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log('📄 User data for sign-out check:', {
+            signInMethods: userData.signInMethods,
+            providerData: currentUser.providerData.map(p => p.providerId)
+          });
+          
+          // Check if they're currently signed in via Google
+          const isCurrentlyGoogle = currentUser.providerData.some(provider => provider.providerId === 'google.com');
+          const hasPassword = userData.signInMethods && userData.signInMethods.includes('password');
+          
+          if (isCurrentlyGoogle) {
+            if (!hasPassword) {
+              console.log('⚠️ User signed in exclusively via Google, forcing sign out...');
+              await signOut(auth);
+            } else {
+              console.log('ℹ️ User has both password and Google, unlinking Google provider...');
+              // Actually unlink the Google provider from the current user
+              try {
+                console.log('🔗 Unlinking Google provider from current user session...');
+                
+                // First, let's check what providers are currently linked
+                console.log('📊 Current providers before unlink:', currentUser.providerData.map(p => p.providerId));
+                
+                // Unlink the Google provider
+                const updatedUser = await unlink(currentUser, 'google.com');
+                console.log('✅ Google provider unlinked from Firebase Auth');
+                console.log('📊 Providers after unlink:', updatedUser.providerData.map(p => p.providerId));
+                
+                // Do NOT sign out - user should remain logged in with their password method
+                console.log('ℹ️ Google provider unlinked successfully, user remains signed in with password');
+              } catch (unlinkError) {
+                console.log('❌ Could not unlink Google provider:', unlinkError);
+                console.log('📊 Error details:', unlinkError.code, unlinkError.message);
+                
+                // Continue anyway - the database update will prevent future Google sign-ins
+                console.log('ℹ️ Continuing with database update despite unlink error');
+              }
+            }
+          } else {
+            console.log('ℹ️ User not currently signed in via Google, no sign-out needed');
+          }
+        }
+      } else {
+        console.log('ℹ️ No current user or different user, no sign-out needed');
+      }
+      
+      // Update user document to disable Google sign-in
+      console.log('📝 Updating user document to disable Google sign-in...');
+      await updateDoc(userRef, {
+        googleLinked: false,
+        googleSignInDisabled: true,
+        googleData: null,
+        lastUpdated: new Date()
+      });
+      
+      // Remove 'google' from sign-in methods
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const signInMethods = userDoc.data().signInMethods || [];
+        const updatedMethods = signInMethods.filter(method => method !== 'google');
+        
+        console.log('🔄 Updating sign-in methods:', { from: signInMethods, to: updatedMethods });
+        
+        await updateDoc(userRef, {
+          signInMethods: updatedMethods
+        });
+      }
+      
+      console.log('✅ Google sign-in disabled for user:', uid);
+      
+      // Additional logging to help debug
+      if (currentUser && currentUser.uid === uid) {
+        console.log('🔍 Current user status after Google disable:', {
+          uid: currentUser.uid,
+          providerData: currentUser.providerData.map(p => p.providerId),
+          emailVerified: currentUser.emailVerified
+        });
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error disabling Google sign-in:', error);
+      return { error };
+    }
+  };
+
+  // Enable Google sign-in for a user
+  const enableGoogleSignIn = async (userId = null) => {
+    try {
+      const uid = userId || user?.uid;
+      if (!uid) throw new Error('No user ID provided');
+      
+      console.log('🔗 Starting Google sign-in enable process for user:', uid);
+      
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, {
+        googleLinked: true,
+        googleSignInDisabled: false,
+        lastUpdated: new Date()
+      });
+      
+      // Add 'google' to sign-in methods if not already there
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const signInMethods = userDoc.data().signInMethods || [];
+        if (!signInMethods.includes('google')) {
+          signInMethods.push('google');
+          console.log('🔄 Adding google to sign-in methods:', signInMethods);
+          await updateDoc(userRef, {
+            signInMethods: signInMethods
+          });
+        } else {
+          console.log('ℹ️ Google already in sign-in methods');
+        }
+      }
+      
+      console.log('✅ Google sign-in enabled for user:', uid);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error enabling Google sign-in:', error);
+      return { error };
+    }
+  };
+
+  // Pre-authentication check for Google sign-in
+  const checkGoogleSignInAllowed = async (email) => {
+    try {
+      // Check if any user with this email has Google sign-in disabled
+      const usersRef = collection(db, 'users');
+      const q = query(usersRef, where('email', '==', email));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+        
+        if (userData.googleSignInDisabled === true) {
+          console.warn('⚠️ Google sign-in blocked for email:', email);
+          return {
+            allowed: false,
+            error: 'Google sign-in has been disabled for this account. Please contact support or use email/password sign-in.'
+          };
+        }
+      }
+      
+      return { allowed: true };
+    } catch (error) {
+      console.error('Error checking Google sign-in permission:', error);
+      return { allowed: true }; // Allow by default if check fails
+    }
+  };
+
+  // Enhanced Google sign-in with role verification and disabled check
   const signInWithGoogle = async (expectedRole = 'parent') => {
     try {
       console.log('🔐 Signing in with Google for role:', expectedRole);
@@ -171,8 +394,20 @@ export const AuthProvider = ({ children }) => {
       // Check if user already exists in Firestore
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       
+      if (userDoc.exists()) {
+        // Check if Google sign-in is disabled for this user
+        const userData = userDoc.data();
+        if (userData.googleSignInDisabled === true) {
+          await signOut(auth);
+          throw new Error(
+            'Google sign-in has been disabled for this account. ' +
+            'Please use your email and password to sign in instead.'
+          );
+        }
+      }
+      
       if (!userDoc.exists()) {
-        console.log('👤 New Google user, creating profile...');
+        console.log('❌ New Google user attempting sign-in');
         
         // For new users, only allow parent role
         if (expectedRole === 'admin') {
@@ -182,34 +417,23 @@ export const AuthProvider = ({ children }) => {
           };
         }
         
-        // Create new user profile
-        const userDocData = {
-          uid: user.uid,
-          email: user.email,
-          firstName: user.displayName ? user.displayName.split(' ')[0] : '',
-          lastName: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : '',
-          profilePicture: user.photoURL || '',
-          role: 'parent', // New Google users are always parents
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString(),
-          signInMethods: ['google'],
-          linkedChildIds: [],
-          googleLinked: true,
-          googleData: {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-            photoURL: user.photoURL,
-            linkedAt: new Date().toISOString()
-          }
-        };
+        // Reject new Google users - they must sign up with access code first
+        console.log('🗑️ Deleting unauthorized Google user from Firebase Auth...');
+        try {
+          // Delete the user from Firebase Auth since they shouldn't have been created
+          await user.delete();
+          console.log('✅ Unauthorized Google user deleted from Firebase Auth');
+        } catch (deleteError) {
+          console.error('❌ Error deleting unauthorized user:', deleteError);
+          // If deletion fails, at least sign them out
+          await signOut(auth);
+        }
         
-        await setDoc(doc(db, 'users', user.uid), userDocData);
-        setUserRole('parent');
-        console.log('✅ New Google user profile created');
-        
-        return { 
-          user: { ...user, role: 'parent' }, 
+        return {
+          error: new Error(
+            'No account found with this Google account. ' +
+            'Please sign up first using your access code from the daycare, then you can link your Google account in settings.'
+          ),
           isNewUser: true,
           needsRoleVerification: false
         };
@@ -217,6 +441,18 @@ export const AuthProvider = ({ children }) => {
         // Existing user
         const userData = userDoc.data();
         console.log('✅ Existing user found with role:', userData.role);
+        
+        // Check if Google sign-in is disabled for this user
+        if (userData.googleSignInDisabled === true) {
+          console.warn('⚠️ Google sign-in disabled for user:', user.uid);
+          // Sign out the user immediately and revoke their access
+          await signOut(auth);
+          return {
+            error: new Error('Google sign-in has been disabled for this account. Please contact support or use email/password sign-in.'),
+            isNewUser: false,
+            needsRoleVerification: false
+          };
+        }
         
         // Check if role matches expected role
         if (userData.role !== expectedRole) {
@@ -239,6 +475,7 @@ export const AuthProvider = ({ children }) => {
           lastLogin: new Date().toISOString(),
           signInMethods: signInMethods,
           googleLinked: true,
+          googleSignInDisabled: false,
           'googleData.lastSignIn': new Date().toISOString(),
           // Update profile info from Google if missing
           ...((!userData.firstName || !userData.lastName) && user.displayName && {
@@ -330,21 +567,37 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Check if user has Google linked
-  const hasGoogleLinked = async (userId = null) => {
+  // Send password reset email
+  const resetPassword = async (email) => {
     try {
-      const uid = userId || user?.uid;
-      if (!uid) return false;
+      console.log('🔐 Sending password reset email to:', email);
       
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        return userData.googleLinked === true || (userData.signInMethods || []).includes('google');
-      }
-      return false;
+      await sendPasswordResetEmail(auth, email);
+      
+      console.log('✅ Password reset email sent successfully');
+      return { success: true };
     } catch (error) {
-      console.error('Error checking Google link status:', error);
-      return false;
+      console.error('❌ Password reset error:', error);
+      return { error };
+    }
+  };
+
+  // Confirm password reset with code
+  const confirmPasswordReset = async (oobCode, newPassword) => {
+    try {
+      console.log('🔐 Confirming password reset...');
+      
+      // Verify the reset code first
+      await verifyPasswordResetCode(auth, oobCode);
+      
+      // Confirm the password reset
+      await confirmPasswordReset(auth, oobCode, newPassword);
+      
+      console.log('✅ Password reset confirmed successfully');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Password reset confirmation error:', error);
+      return { error };
     }
   };
 
@@ -390,34 +643,143 @@ export const AuthProvider = ({ children }) => {
       console.log('🔄 Auth state changed:', user ? `User: ${user.uid}` : 'No user');
       
       if (user) {
-        setUser(user);
-
-        // Get user role from Firestore
+        // Get user role and data from Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            
+            // Only check Google sign-in disabled status if user is actually signed in via Google
+            const isGoogleUser = user.providerData.some(provider => provider.providerId === 'google.com');
+            
+            // Only force sign out if they're signed in exclusively via Google and Google is disabled
+            // But don't interfere if we're in the middle of an unlinking process
+            if (isGoogleUser && userData.googleSignInDisabled === true) {
+              const hasPassword = userData.signInMethods && userData.signInMethods.includes('password');
+              
+              if (!hasPassword) {
+                console.warn('⚠️ User signed in exclusively via Google but Google sign-in is disabled, forcing sign out...');
+                await signOut(auth);
+                return; // Don't set user state
+              } else {
+                console.log('ℹ️ User has both Google and password, Google disabled but password available - allowing access');
+                // Check if user still has Google provider in current session
+                // If not, the unlinking was successful and we should proceed normally
+                const currentProviders = user.providerData.map(p => p.providerId);
+                console.log('🔍 Current providers after Google disable check:', currentProviders);
+              }
+            }
+            
             setUserRole(userData.role);
             console.log('📄 User role loaded:', userData.role);
           } else {
-            console.warn('⚠️ User document not found, creating basic profile...');
-            // Create basic profile if missing
-            const basicUserData = {
-              uid: user.uid,
-              email: user.email,
-              role: 'parent',
-              signInMethods: user.providerData.map(p => p.providerId === 'google.com' ? 'google' : 'password'),
-              createdAt: new Date().toISOString(),
-              lastLogin: new Date().toISOString()
-            };
+            console.warn('⚠️ User document not found...');
             
-            await setDoc(doc(db, 'users', user.uid), basicUserData);
-            setUserRole('parent');
+            // Check if this user signed in with email/password (indicating they had a proper account before)
+            const hasEmailPassword = user.providerData.some(p => p.providerId === 'password');
+            
+            if (hasEmailPassword) {
+              console.log('🔍 User has email/password auth, checking for orphaned children (account restoration)...');
+              
+              // Check if there are children waiting for this parent (by email)
+              try {
+                const childrenQuery = query(
+                  collection(db, 'children'), 
+                  where('parentEmail', '==', user.email),
+                  where('parentRegistered', '==', false)
+                );
+                const childrenSnapshot = await getDocs(childrenQuery);
+                
+                if (!childrenSnapshot.empty) {
+                  console.log('🔗 Found orphaned children, re-linking to parent...');
+                  
+                  // Get the first child's access code for re-registration
+                  const firstChild = childrenSnapshot.docs[0].data();
+                  const accessCode = firstChild.accessCode;
+                  
+                  // Re-register this parent with their children
+                  const reRegistrationData = {
+                    uid: user.uid,
+                    email: user.email,
+                    firstName: firstChild.parentFirstName || '',
+                    lastName: firstChild.parentLastName || '',
+                    role: 'parent',
+                    accessCode: accessCode,
+                    parentRegistered: true,
+                    signInMethods: user.providerData.map(p => p.providerId === 'google.com' ? 'google' : 'password'),
+                    createdAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString(),
+                    registrationCompletedAt: new Date().toISOString(),
+                    restoredAccount: true, // Flag to track this was a restored account
+                    restoredAt: new Date().toISOString()
+                  };
+                  
+                  await setDoc(doc(db, 'users', user.uid), reRegistrationData);
+                  
+                  // Update all children to link with this parent
+                  const batch = writeBatch(db);
+                  childrenSnapshot.docs.forEach(doc => {
+                    batch.update(doc.ref, {
+                      parentId: user.uid,
+                      parentRegistered: true,
+                      linkedAt: new Date().toISOString()
+                    });
+                  });
+                  await batch.commit();
+                  
+                  console.log('✅ Successfully restored parent account and linked children');
+                  setUserRole('parent');
+                } else {
+                  // No children found, create basic profile for email/password user
+                  console.log('📝 Creating basic parent profile for email/password user...');
+                  const basicUserData = {
+                    uid: user.uid,
+                    email: user.email,
+                    role: 'parent',
+                    signInMethods: user.providerData.map(p => p.providerId === 'google.com' ? 'google' : 'password'),
+                    createdAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString()
+                  };
+                  
+                  await setDoc(doc(db, 'users', user.uid), basicUserData);
+                  setUserRole('parent');
+                }
+              } catch (childLinkError) {
+                console.error('❌ Error checking for orphaned children:', childLinkError);
+                // Fallback to basic profile
+                const basicUserData = {
+                  uid: user.uid,
+                  email: user.email,
+                  role: 'parent',
+                  signInMethods: user.providerData.map(p => p.providerId === 'google.com' ? 'google' : 'password'),
+                  createdAt: new Date().toISOString(),
+                  lastLogin: new Date().toISOString()
+                };
+                
+                await setDoc(doc(db, 'users', user.uid), basicUserData);
+                setUserRole('parent');
+              }
+            } else {
+              // This is a Google-only user trying to bypass registration
+              console.warn('❌ Google-only user found without proper registration, deleting...');
+              try {
+                // Delete the user from Firebase Auth since they shouldn't exist
+                await user.delete();
+                console.log('✅ Unauthorized Google-only user deleted from Firebase Auth');
+              } catch (deleteError) {
+                console.error('❌ Error deleting unauthorized user in onAuthStateChanged:', deleteError);
+                // If deletion fails, at least sign them out
+                await signOut(auth);
+              }
+              return; // Don't set user state
+            }
           }
         } catch (error) {
           console.error('❌ Error fetching user role:', error);
           setUserRole(null);
         }
+        
+        setUser(user);
       } else {
         setUser(null);
         setUserRole(null);
@@ -442,6 +804,11 @@ export const AuthProvider = ({ children }) => {
     signInWithGoogle,
     linkGoogleAccount,
     hasGoogleLinked,
+    disableGoogleSignIn,
+    enableGoogleSignIn,
+    checkGoogleSignInAllowed,
+    resetPassword,
+    confirmPasswordReset,
     logOut
   };
 

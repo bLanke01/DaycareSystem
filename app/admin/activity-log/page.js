@@ -55,7 +55,13 @@ const ActivityLog = () => {
     photos: [],
     learningObjectives: [],
     nextSteps: '',
-    date: new Date().toISOString().split('T')[0],
+    date: (() => {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     time: new Date().toTimeString().slice(0, 5)
   });
 
@@ -452,12 +458,15 @@ const ActivityLog = () => {
       console.log('Creating activity document...');
       
       // Create the activity document first
+      const now = new Date();
       const activityData = {
         ...newActivity,
         childName: `${child.firstName} ${child.lastName}`,
         childGroup: child.group,
-        date: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
+        // Use the form date instead of current timestamp for the activity date
+        date: newActivity.date, // Keep the selected date from the form
+        time: newActivity.time, // Keep the selected time from the form
+        createdAt: now.toISOString(),
         createdBy: 'admin', // In real app, would use current user
         photos: [] // Will be updated after image upload
       };
@@ -497,7 +506,13 @@ const ActivityLog = () => {
         photos: [],
         learningObjectives: [],
         nextSteps: '',
-        date: new Date().toISOString().split('T')[0],
+        date: (() => {
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, '0');
+          const day = String(today.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        })(),
         time: new Date().toTimeString().slice(0, 5)
       });
       
@@ -527,7 +542,21 @@ const ActivityLog = () => {
     
     let matchesDate = true;
     if (filterDate) {
-      const activityDate = new Date(activity.date).toISOString().split('T')[0];
+      // Handle both old ISO date format and new YYYY-MM-DD format
+      let activityDate;
+      if (activity.date && activity.date.length === 10 && activity.date.includes('-')) {
+        // Already in YYYY-MM-DD format
+        activityDate = activity.date;
+      } else if (activity.date) {
+        // Convert from ISO or other format to YYYY-MM-DD
+        const date = new Date(activity.date);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        activityDate = `${year}-${month}-${day}`;
+      } else {
+        activityDate = '';
+      }
       matchesDate = activityDate === filterDate;
     }
     
@@ -536,26 +565,66 @@ const ActivityLog = () => {
 
   // Group activities by date
   const groupedActivities = filteredActivities.reduce((groups, activity) => {
-    const date = new Date(activity.date).toISOString().split('T')[0];
+    // Handle both old ISO date format and new YYYY-MM-DD format consistently
+    let date;
+    if (activity.date && activity.date.length === 10 && activity.date.includes('-')) {
+      // Already in YYYY-MM-DD format
+      date = activity.date;
+    } else if (activity.date) {
+      // Convert from ISO or other format to YYYY-MM-DD
+      const actDate = new Date(activity.date);
+      const year = actDate.getFullYear();
+      const month = String(actDate.getMonth() + 1).padStart(2, '0');
+      const day = String(actDate.getDate()).padStart(2, '0');
+      date = `${year}-${month}-${day}`;
+    } else {
+      // Fallback for activities without proper date
+      date = 'unknown-date';
+    }
+    
     if (!groups[date]) {
       groups[date] = [];
     }
-    groups[date].push(activity)
+    groups[date].push(activity);
     return groups;
   }, {});
 
   // Format date for display
   const formatDate = (dateString) => {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString('en-US', options);
+    // Parse date string manually to avoid timezone issues
+    const dateParts = dateString.split('-');
+    const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+    return localDate.toLocaleDateString('en-US', options);
   };
 
   // Handle edit activity
   const handleEditActivity = (activity) => {
+    // Handle date format consistently
+    let editDate;
+    if (activity.date && activity.date.length === 10 && activity.date.includes('-')) {
+      // Already in YYYY-MM-DD format
+      editDate = activity.date;
+    } else if (activity.date) {
+      // Convert from ISO or other format to YYYY-MM-DD
+      const actDate = new Date(activity.date);
+      const year = actDate.getFullYear();
+      const month = String(actDate.getMonth() + 1).padStart(2, '0');
+      const day = String(actDate.getDate()).padStart(2, '0');
+      editDate = `${year}-${month}-${day}`;
+    } else {
+      // Fallback to today's date
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = String(today.getMonth() + 1).padStart(2, '0');
+      const day = String(today.getDate()).padStart(2, '0');
+      editDate = `${year}-${month}-${day}`;
+    }
+
     setEditingActivity({
       ...activity,
-      date: new Date(activity.date).toISOString().split('T')[0],
-      time: activity.time || new Date(activity.date).toTimeString().slice(0, 5)
+      date: editDate,
+      time: activity.time || (activity.date ? new Date(activity.date).toTimeString().slice(0, 5) : new Date().toTimeString().slice(0, 5))
     });
     setExistingPhotos(activity.photos || []);
     setEditImages([]);

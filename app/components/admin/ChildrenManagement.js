@@ -604,13 +604,43 @@ The parent will see this new child immediately in their child profile tabs.`;
       // If parent is registered, delete their user account and related data
       if (parentRegistered && parentId) {
         try {
-          // Delete parent's user document
+          // Delete parent's user document from Firestore
           await deleteDoc(doc(db, 'users', parentId));
           console.log('Parent user document deleted:', parentId);
           
-          // Note: Firebase Auth user deletion requires Admin SDK on the server side
-          // For now, we'll just delete the Firestore documents
-          // The Auth account will remain but won't have associated data
+          // Attempt to delete Firebase Auth user
+          try {
+            const response = await fetch('/api/delete-user', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ uid: parentId }),
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+              console.log('Firebase Auth user deleted successfully');
+            } else {
+              console.warn('Firebase Auth user deletion requires manual action:', result.message);
+              
+              // Show manual deletion instructions
+              const instructions = result.instructions?.join('\n') || 'Manual deletion required in Firebase Console';
+              alert(
+                `Parent account data deleted, but Firebase Auth user requires manual deletion:\n\n${instructions}`
+              );
+            }
+          } catch (authDeleteError) {
+            console.warn('Error calling delete-user API:', authDeleteError);
+            alert(
+              `Parent account data deleted, but Firebase Auth user requires manual deletion:\n\n` +
+              `1. Go to Firebase Console → Authentication → Users\n` +
+              `2. Search for user UID: ${parentId}\n` +
+              `3. Click the three dots menu → Delete user\n` +
+              `4. Confirm deletion`
+            );
+          }
           
         } catch (parentDeleteError) {
           console.warn('Error deleting parent data:', parentDeleteError);

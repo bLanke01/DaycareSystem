@@ -185,17 +185,10 @@ const Footer = () => {
                 for children and families.
               </p>
             </div>
-            
             <div className="flex items-center space-x-6">
-              <Link href="/privacy" className="text-base-content/90 hover:text-primary transition-colors text-sm flex items-center">
-                <span className="mr-1">🔐</span>
-                Privacy Policy
-              </Link>
-              <Link href="/terms" className="text-base-content/90 hover:text-primary transition-colors text-sm flex items-center">
-                <span className="mr-1">📋</span>
-                Terms of Service
-              </Link>
+              <p className="text-base-content">Group members: Tony, Ji, Jun, Jin, and Troy</p>
             </div>
+            
           </div>
         </div>
       </div>

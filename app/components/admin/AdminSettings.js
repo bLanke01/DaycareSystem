@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { doc, updateDoc, getDoc, setDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
-import GoogleAccountLinking from './AdminGoogleAccountLinking';
+import AdminGoogleAccountLinking from './AdminGoogleAccountLinking';
 import { useAuth } from '../../firebase/auth-context';
 import { updateProfile } from 'firebase/auth';
 
@@ -800,7 +800,7 @@ export default function AdminSettings() {
 
                   <div className="divider"></div>
 
-                  <GoogleAccountLinking />
+                  <AdminGoogleAccountLinking />
                 </div>
 
                 <div className="card-actions justify-end">

@@ -94,6 +94,24 @@ const UserTypeSelection = () => {
           </div>
         </div>
       </div>
+      
+      {/* Password Reset Section */}
+      <div className="text-center mt-8">
+        <div className="divider">Need Help?</div>
+        <div className="flex flex-wrap justify-center gap-4 text-sm">
+          <Link href="/auth/reset-password?type=parent" className="link link-primary hover:underline">
+            Reset Parent Password
+          </Link>
+          <span className="text-base-content/60">•</span>
+          <Link href="/auth/reset-password?type=admin" className="link link-primary hover:underline">
+            Reset Staff Password
+          </Link>
+          <span className="text-base-content/60">•</span>
+          <Link href="/auth/resend-verification" className="link link-primary hover:underline">
+            Resend Verification Email
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };
