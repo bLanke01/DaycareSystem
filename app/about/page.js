@@ -12,7 +12,7 @@ export default function About() {
               About Our TinyLog Community
               <span className="text-4xl ml-2">
                 <Image 
-                  src="/Emojis/Home_emoji-Photoroom.png" 
+                  src="/Emojis/Home_Emoji-Photoroom.png" 
                   alt="Home Emoji" 
                   width={48}
                   height={48}
